@@ -12,19 +12,20 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@react-pdf/renderer": "^4.3.1",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.8.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^5.2.1",
-    "html-pdf-node": "^1.0.8",
     "joi": "^18.0.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^9.0.0",
     "multer": "^2.0.2",
     "node": "^20.19.6",
     "pdf-lib": "^1.17.1",
+    "pdfkit": "^0.17.2",
     "streamifier": "^0.1.1",
     "twilio": "^5.10.6"
   }
