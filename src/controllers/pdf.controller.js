@@ -1,8 +1,9 @@
-import { pdf } from "@react-pdf/renderer";
+import { renderToBuffer } from "@react-pdf/renderer";
 import { ResultPDF } from "../utils/ResultPDF.js";
 import Student from "../models/student.model.js";
 import Result from "../models/result.model.js";
 import mongoose from "mongoose";
+import React from "react";
 
 export const generateResultPDF = async (req, res) => {
     try {
@@ -22,12 +23,18 @@ export const generateResultPDF = async (req, res) => {
             return res.status(404).json({ error: "Data not found" });
         }
 
+        if (!Array.isArray(result.subjects)) {
+            return res.status(400).json({
+                error: "Invalid result data",
+            });
+        }
+
         const element = React.createElement(ResultPDF, {
             student,
             result,
         });
 
-        const buffer = await pdf(element).toBuffer();
+        const buffer = await renderToBuffer(element);
 
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader(
@@ -35,10 +42,11 @@ export const generateResultPDF = async (req, res) => {
             `attachment; filename="${student.name}_result.pdf"`
         );
 
-        res.send(buffer);
+        return res.send(buffer);
     } catch (err) {
-        console.error("PDF ERROR:", err);
-        res.status(500).json({ error: "PDF generation failed" });
+        return res.status(500).json({
+            error: "PDF generation failed",
+        });
     }
 };
 
