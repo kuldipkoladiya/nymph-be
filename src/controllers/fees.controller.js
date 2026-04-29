@@ -2,212 +2,225 @@ import FeeStructure from "../models/fees.model.js";
 import Payment from "../models/payment.model.js";
 import Student from "../models/student.model.js";
 import {generateFeeReceiptPDF} from "../utils/receiptPdf.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
-export const setYearlyFee = async (req, res) => {
-    try {
-        const { standard, yearlyFee, otherFees } = req.body;
+export const setYearlyFee = asyncHandler(async (req, res) => {
+    const { standard, yearlyFee, otherFees } = req.body;
 
-        const existing = await FeeStructure.findOne({ standard });
+    const existing = await FeeStructure.findOne({ standard });
 
-        if (existing) {
-            existing.yearlyFee = yearlyFee;
-            existing.otherFees = otherFees || [];
-            await existing.save();
+    if (existing) {
+        existing.yearlyFee = yearlyFee;
+        existing.otherFees = otherFees || [];
+        await existing.save();
 
-            return res.json({ message: "Yearly fee updated", fee: existing });
-        }
-
-        const fee = await FeeStructure.create({
-            standard,
-            yearlyFee,
-            otherFees: otherFees || []
-        });
-
-        res.json({ message: "Yearly fee created", fee });
-
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+        return res.json({ message: "Yearly fee updated", fee: existing });
     }
-};
 
-export const getStudentFeeStatus = async (req, res) => {
-    try {
-        const { studentId } = req.params;
+    const fee = await FeeStructure.create({
+        standard,
+        yearlyFee,
+        otherFees: otherFees || []
+    });
 
-        const student = await Student.findById(studentId);
-        if (!student)
-            return res.status(404).json({ error: "Student not found" });
+    res.json({ message: "Yearly fee created", fee });
+});
 
-        const structure = await FeeStructure.findOne({ standard: student.standard });
-        if (!structure)
-            return res.status(404).json({ error: "Fee structure missing for this standard" });
+export const getStudentFeeStatus = asyncHandler(async (req, res) => {
+    const { studentId } = req.params;
 
-        const payments = await Payment.find({ studentId });
-
-        const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-
-        const otherFeesTotal = structure.otherFees.reduce(
-            (sum, f) => sum + f.amount,
-            0
-        );
-
-        const yearlyTotal = structure.yearlyFee + otherFeesTotal;
-
-        const remaining = yearlyTotal - totalPaid;
-
-        res.json({
-            student,
-            yearlyFee: structure.yearlyFee,
-            otherFees: structure.otherFees,
-            totalYearlyFee: yearlyTotal,
-
-            totalPaid,
-            remaining,
-            isFullyPaid: remaining <= 0,
-
-            paymentHistory: payments,
-        });
-
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    const student = await Student.findById(studentId);
+    if (!student) {
+        res.status(404);
+        throw new Error("Student not found");
     }
-};
-export const recordFeePayment = async (req, res) => {
-    try {
-        const { studentId, amount, paymentMode, note } = req.body;
 
-        const student = await Student.findById(studentId);
-        if (!student) return res.status(404).json({ error: "Student not found" });
-
-        const receiptNo = "REC-" + Math.floor(100000 + Math.random() * 900000);
-
-        const payment = await Payment.create({
-            studentId,
-            amount,
-            paymentMode,
-            note,
-            receiptNo,
-        });
-
-        res.json({ message: "Payment recorded", payment });
-
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    const structure = await FeeStructure.findOne({ standard: student.standard });
+    if (!structure) {
+        res.status(404);
+        throw new Error("Fee structure missing for this standard");
     }
-};
 
-export const getPendingFeesStudents = async (req, res) => {
-    try {
-        const { standard } = req.query; // optional filter
+    const payments = await Payment.find({ studentId });
 
-        // 1️⃣ FETCH STUDENTS (with optional standard filter)
-        const query = standard ? { standard } : {};
-        const students = await Student.find(query);
+    const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
 
-        const structures = await FeeStructure.find({});
-        const payments = await Payment.find({});
+    const otherFeesTotal = structure.otherFees.reduce(
+        (sum, f) => sum + f.amount,
+        0
+    );
 
-        const result = [];
+    const yearlyTotal = structure.yearlyFee + otherFeesTotal;
 
-        for (let s of students) {
-            const feeStructure = structures.find((f) => f.standard === s.standard);
+    const remaining = yearlyTotal - totalPaid;
 
-            if (!feeStructure) continue;
+    res.json({
+        student,
+        yearlyFee: structure.yearlyFee,
+        otherFees: structure.otherFees,
+        totalYearlyFee: yearlyTotal,
 
-            const otherFees = feeStructure.otherFees.reduce(
-                (sum, f) => sum + f.amount,
-                0
-            );
+        totalPaid,
+        remaining,
+        isFullyPaid: remaining <= 0,
 
-            const totalFee = feeStructure.yearlyFee + otherFees;
+        paymentHistory: payments,
+    });
+});
 
-            const studentPayments = payments.filter(
-                (p) => p.studentId.toString() === s._id.toString()
-            );
+export const recordFeePayment = asyncHandler(async (req, res) => {
+    const { studentId, amount, paymentMode, note } = req.body;
 
-            const totalPaid = studentPayments.reduce((sum, p) => sum + p.amount, 0);
+    const student = await Student.findById(studentId);
+    if (!student) {
+        res.status(404);
+        throw new Error("Student not found");
+    }
 
-            const remaining = totalFee - totalPaid;
+    const receiptNo = "REC-" + Math.floor(100000 + Math.random() * 900000);
 
-            if (remaining > 0) {
-                result.push({
-                    studentId: s._id,
-                    name: s.name,
-                    rollNumber: s.rollNumber,
-                    standard: s.standard,
+    const payment = await Payment.create({
+        studentId,
+        amount,
+        paymentMode,
+        note,
+        receiptNo,
+    });
 
-                    totalFee,
-                    totalPaid,
-                    remaining,
+    res.json({ message: "Payment recorded", payment });
+});
 
-                    status:
-                        remaining <= 0
-                            ? "Fully Paid"
-                            : totalPaid === 0
-                                ? "Not Paid"
-                                : "Partially Paid",
+export const getPendingFeesStudents = asyncHandler(async (req, res) => {
+    const { standard } = req.query; // optional filter
 
-                    percentagePaid: ((totalPaid / totalFee) * 100).toFixed(2),
-                });
+    const matchStage = standard ? { $match: { standard } } : { $match: {} };
+
+    const pipelineResult = await Student.aggregate([
+        matchStage,
+        {
+            $lookup: {
+                from: "feestructures",
+                localField: "standard",
+                foreignField: "standard",
+                as: "feeStructure"
             }
+        },
+        {
+            $unwind: { path: "$feeStructure", preserveNullAndEmptyArrays: true }
+        },
+        {
+            $lookup: {
+                from: "payments",
+                localField: "_id",
+                foreignField: "studentId",
+                as: "payments"
+            }
+        },
+        {
+            $addFields: {
+                totalPaid: { $sum: "$payments.amount" },
+                otherFeesTotal: { $sum: "$feeStructure.otherFees.amount" },
+                yearlyFee: { $ifNull: ["$feeStructure.yearlyFee", 0] }
+            }
+        },
+        {
+            $addFields: {
+                totalFee: { $add: ["$yearlyFee", "$otherFeesTotal"] }
+            }
+        },
+        {
+            $addFields: {
+                remaining: { $subtract: ["$totalFee", "$totalPaid"] }
+            }
+        },
+        {
+            $match: {
+                remaining: { $gt: 0 }
+            }
+        },
+        {
+            $project: {
+                studentId: "$_id",
+                name: 1,
+                rollNumber: 1,
+                standard: 1,
+                totalFee: 1,
+                totalPaid: 1,
+                remaining: 1,
+                status: {
+                    $cond: {
+                        if: { $lte: ["$remaining", 0] },
+                        then: "Fully Paid",
+                        else: {
+                            $cond: {
+                                if: { $eq: ["$totalPaid", 0] },
+                                then: "Not Paid",
+                                else: "Partially Paid"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        {
+            $sort: { remaining: -1 }
         }
+    ]);
 
-        // Sort by largest pending amount
-        result.sort((a, b) => b.remaining - a.remaining);
+    const result = pipelineResult.map(item => ({
+        ...item,
+        percentagePaid: item.totalFee === 0 ? "0.00" : ((item.totalPaid / item.totalFee) * 100).toFixed(2)
+    }));
 
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    res.json(result);
+});
+
+
+
+export const addPayment = asyncHandler(async (req, res) => {
+    const { studentId, amount } = req.body;
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+        res.status(404);
+        throw new Error("Student not found");
     }
-};
 
+    const feeStructure = await FeeStructure.findOne({
+        standard: student.standard,
+    });
 
+    const otherFees = feeStructure.otherFees.reduce(
+        (sum, f) => sum + f.amount,
+        0
+    );
 
-export const addPayment = async (req, res) => {
-    try {
-        const { studentId, amount } = req.body;
+    const totalFee = feeStructure.yearlyFee + otherFees;
 
-        const student = await Student.findById(studentId);
-        if (!student) return res.status(404).json({ error: "Student not found" });
+    const payments = await Payment.find({ studentId });
+    const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
 
-        const feeStructure = await FeeStructure.findOne({
-            standard: student.standard,
-        });
+    const remaining = totalFee - (totalPaid + amount);
 
-        const otherFees = feeStructure.otherFees.reduce(
-            (sum, f) => sum + f.amount,
-            0
-        );
+    const payment = await Payment.create({
+        studentId,
+        amount,
+        date: new Date(),
+    });
 
-        const totalFee = feeStructure.yearlyFee + otherFees;
+    // CREATE PDF RECEIPT
+    const pdfUrl = await generateFeeReceiptPDF(student, payment, {
+        yearlyFee: feeStructure.yearlyFee,
+        otherFees,
+        totalFee,
+        totalPaid: totalPaid + amount,
+        remaining,
+    });
 
-        const payments = await Payment.find({ studentId });
-        const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-
-        const remaining = totalFee - (totalPaid + amount);
-
-        const payment = await Payment.create({
-            studentId,
-            amount,
-            date: new Date(),
-        });
-
-        // CREATE PDF RECEIPT
-        const pdfUrl = await generateFeeReceiptPDF(student, payment, {
-            yearlyFee: feeStructure.yearlyFee,
-            otherFees,
-            totalFee,
-            totalPaid: totalPaid + amount,
-            remaining,
-        });
-
-        res.json({
-            message: "Payment added successfully",
-            payment,
-            receiptPdf: pdfUrl,
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
+    res.json({
+        message: "Payment added successfully",
+        payment,
+        receiptPdf: pdfUrl,
+    });
+});
 

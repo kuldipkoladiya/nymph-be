@@ -1,115 +1,70 @@
 import Student from "../models/student.model.js";
 import cloudinary from "../config/cloudinary.js";
 import * as streakier from "streamifier";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
-export const createStudent = async (req, res) => {
-    try {
-        const data = req.body;
+export const createStudent = asyncHandler(async (req, res) => {
+    const data = req.body;
 
-        // if (req.file) {
-        //     const uploadStream = cloudinary.uploader.upload_stream(
-        //         { folder: "students" },
-        //         (error, result) => {
-        //             if (error) return res.status(500).json({ error: error.message });
-        //
-        //             data.image = result.secure_url;
-        //             data.imageId = result.public_id;
-        //
-        //             // after upload → save student
-        //             Student.create(data).then(student => {
-        //                 res.status(201).json({ message: "Student created", student });
-        //             });
-        //         }
-        //     );
-        //
-        //     streakier.createReadStream(req.file.buffer).pipe(uploadStream);
-        //     return;
-        // }
+    // without image
+    const student = await Student.create(data);
+    res.status(201).json({ message: "Student created", student });
+});
 
-        // without image
-        const student = await Student.create(data);
-        res.status(201).json({ message: "Student created", student });
+export const getStudents = asyncHandler(async (req, res) => {
+    const { standard, section, search } = req.query;
 
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    const filter = {};
+
+    if (standard) filter.standard = standard;
+    if (section) filter.section = section;
+
+    if (search) {
+        filter.name = { $regex: search, $options: "i" };
     }
-};
 
-export const getStudents = async (req, res) => {
-    try {
-        const { standard, section, search } = req.query;
+    const students = await Student.find(filter).sort({ createdAt: -1 });
 
-        const filter = {};
-
-        if (standard) filter.standard = standard;
-        if (section) filter.section = section;
-
-        if (search) {
-            filter.name = { $regex: search, $options: "i" };
-        }
-
-        const students = await Student.find(filter).sort({ createdAt: -1 });
-
-        res.json(students);
-
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
+    res.json(students);
+});
 
 // GET ONE STUDENT
-export const getStudent = async (req, res) => {
-    try {
-        const student = await Student.findById(req.params.id);
-        if (!student) return res.status(404).json({ message: "Not found" });
-
-        res.json(student);
-
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+export const getStudent = asyncHandler(async (req, res) => {
+    const student = await Student.findById(req.params.id);
+    if (!student) {
+        res.status(404);
+        throw new Error("Student not found");
     }
-};
+
+    res.json(student);
+});
 
 // UPDATE STUDENT
-export const updateStudent = async (req, res) => {
-    try {
-        const data = req.body;
+export const updateStudent = asyncHandler(async (req, res) => {
+    const data = req.body;
 
-        if (req.file) {
-            data.image = "/uploads/students/" + req.file.filename;
-        }
-
-        const student = await Student.findByIdAndUpdate(
-            req.params.id,
-            data,
-            { new: true }
-        );
-
-        res.json({ message: "Updated", student });
-
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    if (req.file) {
+        data.image = "/uploads/students/" + req.file.filename;
     }
-};
+
+    const student = await Student.findByIdAndUpdate(
+        req.params.id,
+        data,
+        { new: true }
+    );
+
+    res.json({ message: "Updated", student });
+});
 
 // DELETE STUDENT
-export const deleteStudent = async (req, res) => {
-    try {
-        await Student.findByIdAndDelete(req.params.id);
-        res.json({ message: "Deleted" });
+export const deleteStudent = asyncHandler(async (req, res) => {
+    await Student.findByIdAndDelete(req.params.id);
+    res.json({ message: "Deleted" });
+});
 
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
+export const getStudentsByStandard = asyncHandler(async (req, res) => {
+    const students = await Student.find({ standard: req.params.standard })
+        .select("name rollNumber _id");
 
-export const getStudentsByStandard = async (req, res) => {
-    try {
-        const students = await Student.find({ standard: req.params.standard })
-            .select("name rollNumber _id");
-
-        res.json({ students });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
+    res.json({ students });
+});
