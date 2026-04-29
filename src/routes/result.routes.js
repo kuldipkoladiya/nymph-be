@@ -6,12 +6,14 @@ import {
     deleteResult,
 } from "../controllers/result.controller.js";
 import {generateResultPDF, getResultById} from "../controllers/pdf.controller.js";
+import validate from "../middlewares/validate.js";
+import {createResultSchema} from "../modules/result/result.validation.js";
 
 
 
 const router = express.Router();
 
-router.post("/", createResult);
+router.post("/", validate(createResultSchema), createResult);
 router.put("/:id", updateResult);
 router.get("/student/:id", getStudentResults);
 router.delete("/:id", deleteResult);
