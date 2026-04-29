@@ -122,3 +122,25 @@ export const getAttendanceByStandard = asyncHandler(async (req, res) => {
 
     res.json(attendance);
 });
+
+export const getAttendanceByRange = asyncHandler(async (req, res) => {
+    const { standard, startDate, endDate } = req.query;
+
+    if (!standard || !startDate || !endDate) {
+        res.status(400);
+        throw new Error("standard, startDate, and endDate are required");
+    }
+
+    const students = await Student.find({ standard });
+    const studentIds = students.map(s => s._id);
+
+    const attendance = await Attendance.find({
+        studentId: { $in: studentIds },
+        date: { 
+            $gte: new Date(startDate), 
+            $lte: new Date(endDate) 
+        }
+    }).populate("studentId").sort({ date: 1 });
+
+    res.json(attendance);
+});
