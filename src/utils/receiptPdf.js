@@ -19,8 +19,8 @@ export const generateFeeReceiptPDF = async (student, payment, feeInfo) => {
     drawText("--------------------------------------", 16);
 
     // STUDENT DETAILS
-    drawText(`Receipt No: RCPT-${payment._id}`);
-    drawText(`Date: ${new Date(payment.date).toLocaleDateString()}`);
+    drawText(`Receipt No: ${payment.receiptNo || payment._id}`);
+    drawText(`Date: ${new Date(payment.createdAt || payment.date || Date.now()).toLocaleDateString()}`);
     drawText(`Student Name: ${student.name}`);
     drawText(`Roll No: ${student.rollNumber}`);
     drawText(`Standard: ${student.standard}`);
