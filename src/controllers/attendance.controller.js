@@ -144,3 +144,12 @@ export const getAttendanceByRange = asyncHandler(async (req, res) => {
 
     res.json(attendance);
 });
+
+export const deleteAttendance = asyncHandler(async (req, res) => {
+    const attendance = await Attendance.findByIdAndDelete(req.params.id);
+    if (!attendance) {
+        res.status(404);
+        throw new Error("Attendance record not found");
+    }
+    res.json({ message: "Attendance record deleted" });
+});

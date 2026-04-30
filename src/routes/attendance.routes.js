@@ -4,7 +4,8 @@ import {
     updateAttendance,
     getAttendanceByDate,
     getStudentAttendance,
-    getMonthlySummary, getAttendanceByDateAndStandard, getAttendanceByStandard, getAttendanceByRange
+    getMonthlySummary, getAttendanceByDateAndStandard, getAttendanceByStandard, getAttendanceByRange,
+    deleteAttendance
 } from "../controllers/attendance.controller.js";
 import validate from "../middlewares/validate.js";
 import {markAttendanceSchema} from "../modules/attendance/attendance.validation.js";
@@ -19,4 +20,5 @@ router.get("/summary/monthly", getMonthlySummary);
 router.get("/filter", getAttendanceByDateAndStandard);
 router.get("/standard/:standard", getAttendanceByStandard);
 router.get("/range", getAttendanceByRange);
+router.delete("/:id", deleteAttendance);
 export default router;

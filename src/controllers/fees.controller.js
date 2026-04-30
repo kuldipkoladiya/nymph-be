@@ -26,6 +26,20 @@ export const setYearlyFee = asyncHandler(async (req, res) => {
     res.json({ message: "Yearly fee created", fee });
 });
 
+export const getAllFeeStructures = asyncHandler(async (req, res) => {
+    const structures = await FeeStructure.find().sort({ standard: 1 });
+    res.json(structures);
+});
+
+export const deleteFeeStructure = asyncHandler(async (req, res) => {
+    const fee = await FeeStructure.findByIdAndDelete(req.params.id);
+    if (!fee) {
+        res.status(404);
+        throw new Error("Fee structure not found");
+    }
+    res.json({ message: "Fee structure deleted" });
+});
+
 export const getStudentFeeStatus = asyncHandler(async (req, res) => {
     const { studentId } = req.params;
 
@@ -222,5 +236,23 @@ export const addPayment = asyncHandler(async (req, res) => {
         payment,
         receiptPdf: pdfUrl,
     });
+});
+
+export const updatePayment = asyncHandler(async (req, res) => {
+    const payment = await Payment.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!payment) {
+        res.status(404);
+        throw new Error("Payment record not found");
+    }
+    res.json({ message: "Payment updated", payment });
+});
+
+export const deletePayment = asyncHandler(async (req, res) => {
+    const payment = await Payment.findByIdAndDelete(req.params.id);
+    if (!payment) {
+        res.status(404);
+        throw new Error("Payment record not found");
+    }
+    res.json({ message: "Payment record deleted" });
 });
 
