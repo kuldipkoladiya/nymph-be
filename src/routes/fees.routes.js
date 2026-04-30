@@ -4,7 +4,8 @@ import {
     recordFeePayment,
     getStudentFeeStatus, getPendingFeesStudents,
     updatePayment, deletePayment,
-    getAllFeeStructures, deleteFeeStructure
+    getAllFeeStructures, deleteFeeStructure,
+    getAllPayments
 } from "../controllers/fees.controller.js";
 import {getFeesAnalytics} from "../controllers/fees.analytics.controller.js";
 import validate from "../middlewares/validate.js";
@@ -14,6 +15,7 @@ const router = express.Router();
 
 router.post("/structure", validate(setYearlyFeeSchema), setYearlyFee);
 router.get("/all", getAllFeeStructures);
+router.get("/all-payments", getAllPayments);
 router.delete("/:id", deleteFeeStructure);
 router.post("/pay", validate(recordPaymentSchema), recordFeePayment);
 router.get("/status/:studentId", getStudentFeeStatus);

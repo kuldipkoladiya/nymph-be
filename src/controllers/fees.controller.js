@@ -256,3 +256,8 @@ export const deletePayment = asyncHandler(async (req, res) => {
     res.json({ message: "Payment record deleted" });
 });
 
+export const getAllPayments = asyncHandler(async (req, res) => {
+    const payments = await Payment.find().populate("studentId").sort({ createdAt: -1 });
+    res.json(payments);
+});
+
