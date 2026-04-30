@@ -10,6 +10,7 @@ const paymentSchema = new mongoose.Schema(
         note: { type: String }, // optional remarks
 
         receiptNo: { type: String, required: true },
+        receiptPdf: { type: String },
     },
     { timestamps: true }
 );

@@ -121,6 +121,9 @@ export const recordFeePayment = asyncHandler(async (req, res) => {
         remaining: yearlyTotal - totalPaid,
     });
 
+    payment.receiptPdf = pdfUrl;
+    await payment.save();
+
     res.json({ message: "Payment recorded", payment, receiptPdf: pdfUrl });
 });
 
