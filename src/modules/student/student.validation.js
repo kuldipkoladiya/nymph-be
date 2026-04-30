@@ -14,6 +14,7 @@ export const createStudentSchema = Joi.object({
 
 export const updateStudentSchema = Joi.object({
     name: Joi.string().optional(),
+    rollNumber: Joi.string().optional(),
     standard: Joi.string().optional(),
     section: Joi.string().optional(),
     fatherName: Joi.string().optional(),
@@ -21,4 +22,4 @@ export const updateStudentSchema = Joi.object({
     phone: Joi.string().optional(),
     address: Joi.string().optional(),
     dob: Joi.string().optional(),
-});
+}).unknown();
