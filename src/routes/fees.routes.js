@@ -5,7 +5,7 @@ import {
     getStudentFeeStatus, getPendingFeesStudents,
     updatePayment, deletePayment,
     getAllFeeStructures, deleteFeeStructure,
-    getAllPayments
+    getAllPayments, getReceiptPdf
 } from "../controllers/fees.controller.js";
 import {getFeesAnalytics} from "../controllers/fees.analytics.controller.js";
 import validate from "../middlewares/validate.js";
@@ -22,6 +22,7 @@ router.get("/status/:studentId", getStudentFeeStatus);
 router.get("/analytics", getFeesAnalytics);
 router.get("/pending", getPendingFeesStudents);
 router.put("/pay/:id", updatePayment);
+router.get("/receipt/:paymentId", getReceiptPdf);
 router.delete("/pay/:id", deletePayment);
 
 export default router;

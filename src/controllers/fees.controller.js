@@ -284,6 +284,44 @@ export const deletePayment = asyncHandler(async (req, res) => {
     res.json({ message: "Payment record deleted" });
 });
 
+export const getReceiptPdf = asyncHandler(async (req, res) => {
+    const payment = await Payment.findById(req.params.paymentId);
+    if (!payment) {
+        res.status(404);
+        throw new Error("Payment record not found");
+    }
+
+    if (payment.receiptPdf) {
+        return res.json({ pdfUrl: payment.receiptPdf });
+    }
+
+    // Generate if missing
+    const student = await Student.findById(payment.studentId);
+    const payments = await Payment.find({ studentId: student._id });
+    const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+    const feeStructure = await FeeStructure.findOne({ standard: student.standard });
+
+    let otherFeesTotal = 0;
+    let yearlyTotal = 0;
+    if (feeStructure) {
+        otherFeesTotal = feeStructure.otherFees.reduce((sum, f) => sum + f.amount, 0);
+        yearlyTotal = feeStructure.yearlyFee + otherFeesTotal;
+    }
+
+    const pdfUrl = await generateFeeReceiptPDF(student, payment, {
+        yearlyFee: feeStructure?.yearlyFee || 0,
+        otherFees: otherFeesTotal,
+        totalFee: yearlyTotal,
+        totalPaid,
+        remaining: yearlyTotal - totalPaid,
+    });
+
+    payment.receiptPdf = pdfUrl;
+    await payment.save();
+
+    res.json({ pdfUrl });
+});
+
 export const getAllPayments = asyncHandler(async (req, res) => {
     const payments = await Payment.find().populate("studentId").sort({ createdAt: -1 });
     res.json(payments);
