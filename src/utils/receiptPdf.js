@@ -45,12 +45,15 @@ export const generateFeeReceiptPDF = async (student, payment, feeInfo) => {
             { 
                 resource_type: "raw", 
                 folder: "receipts",
-                access_mode: "public",
-                content_type: "application/pdf"
+                format: "pdf"
             },
             (error, result) => {
-                if (error) reject(error);
-                else resolve(result.secure_url);
+                if (error) {
+                    console.error("Cloudinary Upload Error:", error);
+                    reject(error);
+                } else {
+                    resolve(result.secure_url);
+                }
             }
         );
 

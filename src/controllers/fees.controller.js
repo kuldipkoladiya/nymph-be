@@ -113,16 +113,21 @@ export const recordFeePayment = asyncHandler(async (req, res) => {
         yearlyTotal = feeStructure.yearlyFee + otherFeesTotal;
     }
 
-    const pdfUrl = await generateFeeReceiptPDF(student, payment, {
-        yearlyFee: feeStructure?.yearlyFee || 0,
-        otherFees: otherFeesTotal,
-        totalFee: yearlyTotal,
-        totalPaid,
-        remaining: yearlyTotal - totalPaid,
-    });
+    let pdfUrl = "";
+    try {
+        pdfUrl = await generateFeeReceiptPDF(student, payment, {
+            yearlyFee: feeStructure?.yearlyFee || 0,
+            otherFees: otherFeesTotal,
+            totalFee: yearlyTotal,
+            totalPaid,
+            remaining: yearlyTotal - totalPaid,
+        });
 
-    payment.receiptPdf = pdfUrl;
-    await payment.save();
+        payment.receiptPdf = pdfUrl;
+        await payment.save();
+    } catch (err) {
+        console.error("PDF Generation failed but payment recorded:", err);
+    }
 
     res.json({ message: "Payment recorded", payment, receiptPdf: pdfUrl });
 });
