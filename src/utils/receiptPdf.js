@@ -40,21 +40,20 @@ export const generateFeeReceiptPDF = async (student, payment, feeInfo) => {
     const pdfBytes = await pdfDoc.save();
 
     // UPLOAD TO CLOUDINARY
-    const uploadResponse = await cloudinary.uploader.upload_stream({
-        resource_type: "raw",
-        folder: "receipts",
-        format: "pdf",
-    });
-
     return new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-            { resource_type: "raw", folder: "receipts" },
+            { 
+                resource_type: "raw", 
+                folder: "receipts",
+                access_mode: "public",
+                content_type: "application/pdf"
+            },
             (error, result) => {
                 if (error) reject(error);
                 else resolve(result.secure_url);
             }
         );
 
-        stream.end(pdfBytes);
+        stream.end(Buffer.from(pdfBytes));
     });
 };
