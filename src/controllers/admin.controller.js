@@ -58,3 +58,14 @@ export const loginAdmin = asyncHandler(async (req, res) => {
     });
 });
 
+export const getAdminProfile = asyncHandler(async (req, res) => {
+    const admin = await Admin.findById(req.admin.id);
+    if (!admin) {
+        res.status(404);
+        throw new Error("Admin not found");
+    }
+    const adminData = admin.toObject();
+    delete adminData.password;
+    res.json(adminData);
+});
+
