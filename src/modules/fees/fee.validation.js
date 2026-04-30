@@ -14,6 +14,6 @@ export const setYearlyFeeSchema = Joi.object({
 export const recordPaymentSchema = Joi.object({
     studentId: Joi.string().required(),
     amount: Joi.number().required(),
-    paymentMode: Joi.string().valid("Cash", "Online", "UPI"),
+    paymentMode: Joi.string().valid("Cash", "Online", "UPI", "Cheque", "Bank Transfer"),
     note: Joi.string().allow(""),
 });
