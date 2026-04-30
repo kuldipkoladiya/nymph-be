@@ -27,12 +27,12 @@ export const generateFeeReceiptPDF = async (student, payment, feeInfo) => {
     drawText(`--------------------------------------`, 16);
 
     // PAYMENT DETAILS
-    drawText(`Yearly Fee: ₹${feeInfo.yearlyFee}`);
-    drawText(`Other Fees: ₹${feeInfo.otherFees}`);
-    drawText(`Total Fee: ₹${feeInfo.totalFee}`);
-    drawText(`Paid This Time: ₹${payment.amount}`);
-    drawText(`Total Paid: ₹${feeInfo.totalPaid}`);
-    drawText(`Pending Amount: ₹${feeInfo.remaining}`);
+    drawText(`Yearly Fee: Rs.${feeInfo.yearlyFee}`);
+    drawText(`Other Fees: Rs.${feeInfo.otherFees}`);
+    drawText(`Total Fee: Rs.${feeInfo.totalFee}`);
+    drawText(`Paid This Time: Rs.${payment.amount}`);
+    drawText(`Total Paid: Rs.${feeInfo.totalPaid}`);
+    drawText(`Pending Amount: Rs.${feeInfo.remaining}`);
     drawText(`--------------------------------------`, 16);
 
     drawText("Thank you for the payment!", 16, rgb(0, 0.4, 0));
