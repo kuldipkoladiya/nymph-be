@@ -101,7 +101,27 @@ export const recordFeePayment = asyncHandler(async (req, res) => {
         receiptNo,
     });
 
-    res.json({ message: "Payment recorded", payment });
+    // Generate PDF Receipt Data
+    const status = await Payment.find({ studentId });
+    const totalPaid = status.reduce((sum, p) => sum + p.amount, 0);
+    const feeStructure = await FeeStructure.findOne({ standard: student.standard });
+    
+    let otherFeesTotal = 0;
+    let yearlyTotal = 0;
+    if (feeStructure) {
+        otherFeesTotal = feeStructure.otherFees.reduce((sum, f) => sum + f.amount, 0);
+        yearlyTotal = feeStructure.yearlyFee + otherFeesTotal;
+    }
+
+    const pdfUrl = await generateFeeReceiptPDF(student, payment, {
+        yearlyFee: feeStructure?.yearlyFee || 0,
+        otherFees: otherFeesTotal,
+        totalFee: yearlyTotal,
+        totalPaid,
+        remaining: yearlyTotal - totalPaid,
+    });
+
+    res.json({ message: "Payment recorded", payment, receiptPdf: pdfUrl });
 });
 
 export const getPendingFeesStudents = asyncHandler(async (req, res) => {
