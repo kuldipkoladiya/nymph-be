@@ -60,8 +60,11 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
         absentToday,
         attendancePercent,
         classWise,
-        averagePercentage,
-        topStudents,
+        averagePercentage: Math.min(averagePercentage, 100),
+        topStudents: topStudents.map(s => ({
+            ...s._doc,
+            percentage: Math.min(s.percentage, 100)
+        })),
         failCount
     });
 });

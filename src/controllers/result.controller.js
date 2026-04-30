@@ -21,7 +21,8 @@ export const createResult = asyncHandler(async (req, res) => {
         totalMaximum += Number(s.totalMarks);
     });
 
-    const percentage = Number(((totalObtained / totalMaximum) * 100).toFixed(2));
+    let percentage = Number(((totalObtained / totalMaximum) * 100).toFixed(2));
+    if (percentage > 100) percentage = 100;
     const grade = calculateGrade(percentage);
 
     const result = await Result.create({
@@ -57,7 +58,9 @@ export const updateResult = asyncHandler(async (req, res) => {
 
         updateData.totalObtained = totalObtained;
         updateData.totalMaximum = totalMaximum;
-        updateData.percentage = Number(((totalObtained / totalMaximum) * 100).toFixed(2));
+        let percentage = Number(((totalObtained / totalMaximum) * 100).toFixed(2));
+        if (percentage > 100) percentage = 100;
+        updateData.percentage = percentage;
         updateData.grade = calculateGrade(updateData.percentage);
     }
 
