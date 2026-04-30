@@ -297,6 +297,10 @@ export const getReceiptPdf = asyncHandler(async (req, res) => {
 
     // Generate if missing
     const student = await Student.findById(payment.studentId);
+    if (!student) {
+        res.status(404);
+        throw new Error("Student associated with this payment not found");
+    }
     const payments = await Payment.find({ studentId: student._id });
     const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
     const feeStructure = await FeeStructure.findOne({ standard: student.standard });

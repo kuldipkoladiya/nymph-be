@@ -9,8 +9,10 @@ export const generateFeeReceiptPDF = async (student, payment, feeInfo) => {
 
     let y = 760;
 
+    const clean = (str) => String(str || "").replace(/₹/g, "Rs.");
+
     const drawText = (text, size = 14, color = rgb(0, 0, 0)) => {
-        page.drawText(text, { x: 50, y, size, font, color });
+        page.drawText(clean(text), { x: 50, y, size, font, color });
         y -= 25;
     };
 
