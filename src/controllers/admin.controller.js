@@ -11,6 +11,27 @@ const generateToken = (admin) => {
     );
 };
 
+// ─── VERIFY SETUP KEY ─────────────────────────────────────────────────────────
+// POST /api/auth/verify-setup-key
+// Called in Step 1 of the /setup page. Validates the secret key and checks
+// that setup has not been completed yet. Does NOT create any account.
+export const verifySetupKey = asyncHandler(async (req, res) => {
+    const { setupKey } = req.body;
+
+    if (!setupKey || setupKey !== process.env.SETUP_SECRET_KEY) {
+        res.status(403);
+        throw new Error("Invalid setup key. Please try again.");
+    }
+
+    const adminCount = await Admin.countDocuments();
+    if (adminCount > 0) {
+        res.status(403);
+        throw new Error("Setup already completed. A superadmin account already exists.");
+    }
+
+    res.json({ valid: true, message: "Key verified. Proceed to create your account." });
+});
+
 // ─── ONE-TIME SUPERADMIN SETUP ────────────────────────────────────────────────
 // POST /api/auth/setup
 // Only works when:
