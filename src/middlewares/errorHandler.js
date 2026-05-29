@@ -1,4 +1,4 @@
-export const errorHandler = (err, req, res, next) => {
+export const errorHandler = (err, req, res) => {
     console.error(err.stack);
 
     // res.status() sets res.statusCode — use that if already set (and not default 200)
