@@ -9,29 +9,30 @@ import {
 } from "../controllers/student.controller.js";
 import validate from "../middlewares/validate.js";
 import upload from "../middlewares/upload.js";
-
-
+import { authorize, authorizeAny } from "../middlewares/authorize.js";
 
 const router = express.Router();
 
 router.post(
     "/",
+    authorize("students"),
     upload.single("image"),
     validate(createStudentSchema),
     createStudent
 );
 
-router.get("/", getStudents);
-router.get("/:id", getStudent);
+router.get("/", authorizeAny(["students", "attendance", "results", "fees"]), getStudents);
+router.get("/:id", authorizeAny(["students", "attendance", "results", "fees"]), getStudent);
 
 router.put(
     "/:id",
+    authorize("students"),
     upload.single("image"),
     validate(updateStudentSchema),
     updateStudent
 );
 
-router.delete("/:id", deleteStudent);
-router.get("/by-standard/:standard", getStudentsByStandard);
+router.delete("/:id", authorize("students"), deleteStudent);
+router.get("/by-standard/:standard", authorizeAny(["students", "attendance", "results", "fees"]), getStudentsByStandard);
 
 export default router;

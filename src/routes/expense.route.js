@@ -8,8 +8,11 @@ import {
 } from "../controllers/expense.controller.js";
 import validate from "../middlewares/validate.js";
 import {addExpenseSchema} from "../modules/expense/expense.validation.js";
+import { authorize } from "../middlewares/authorize.js";
 
 const router = express.Router();
+
+router.use(authorize("expenses"));
 
 router.post("/add", validate(addExpenseSchema), addExpense);
 router.get("/all", getExpenses);

@@ -8,8 +8,11 @@ import {
 import {generateResultPDF, getResultById, sendResultWhatsAppController, getWhatsAppStatusController} from "../controllers/pdf.controller.js";
 import validate from "../middlewares/validate.js";
 import {createResultSchema} from "../modules/result/result.validation.js";
+import { authorize } from "../middlewares/authorize.js";
 
 const router = express.Router();
+
+router.use(authorize("results"));
 
 router.post("/", validate(createResultSchema), createResult);
 router.put("/:id", updateResult);

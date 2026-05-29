@@ -2,8 +2,11 @@
   "name": "nymphclasses",
   "version": "1.0.0",
   "type": "module",
-  "description": "",
+  "description": "Nymph Classes Admin Backend",
   "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js"
@@ -11,6 +14,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.1",
     "axios": "^1.13.2",
@@ -23,7 +29,6 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^9.0.0",
     "multer": "^2.0.2",
-    "node": "^20.19.6",
     "pdf-lib": "^1.17.1",
     "pdfkit": "^0.17.2",
     "qrcode-terminal": "^0.12.0",

@@ -9,8 +9,11 @@ import {
 } from "../controllers/attendance.controller.js";
 import validate from "../middlewares/validate.js";
 import {markAttendanceSchema} from "../modules/attendance/attendance.validation.js";
+import { authorize } from "../middlewares/authorize.js";
 
 const router = express.Router();
+
+router.use(authorize("attendance"));
 
 router.post("/", validate(markAttendanceSchema), markAttendance);
 router.put("/:id", updateAttendance);

@@ -6,6 +6,15 @@ const adminSchema = new mongoose.Schema(
         name: { type: String, required: true },
         email: { type: String, required: true, unique: true },
         password: { type: String, required: true },
+        role: { type: String, enum: ["superadmin", "staff"], default: "staff" },
+        permissions: {
+            dashboard: { type: Boolean, default: false },
+            students: { type: Boolean, default: false },
+            results: { type: Boolean, default: false },
+            fees: { type: Boolean, default: false },
+            attendance: { type: Boolean, default: false },
+            expenses: { type: Boolean, default: false },
+        },
     },
     { timestamps: true }
 );

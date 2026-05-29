@@ -10,8 +10,11 @@ import {
 import {getFeesAnalytics} from "../controllers/fees.analytics.controller.js";
 import validate from "../middlewares/validate.js";
 import {recordPaymentSchema, setYearlyFeeSchema} from "../modules/fees/fee.validation.js";
+import { authorize } from "../middlewares/authorize.js";
 
 const router = express.Router();
+
+router.use(authorize("fees"));
 
 router.post("/structure", validate(setYearlyFeeSchema), setYearlyFee);
 router.get("/all", getAllFeeStructures);
