@@ -1,6 +1,7 @@
 import Attendance from "../models/attendance.model.js";
 import Student from "../models/student.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { sendTextWhatsApp, getWhatsAppStatus } from "../utils/whatsappSender.js";
 
 export const markAttendance = asyncHandler(async (req, res) => {
     const { studentId, date, status, remark } = req.body;
@@ -23,6 +24,34 @@ export const markAttendance = asyncHandler(async (req, res) => {
             message: "Attendance recorded",
             attendance
         });
+
+        // Trigger WhatsApp in background if student is absent
+        if (status === "Absent" && req.body.sendWhatsApp) {
+            (async () => {
+                try {
+                    if (!getWhatsAppStatus()) {
+                        console.warn(`⚠️ [WhatsApp] Cannot send absentee notification for ${student.name}. WhatsApp client is not ready.`);
+                        return;
+                    }
+                    if (!student.phone) {
+                        console.warn(`⚠️ [WhatsApp] Student ${student.name} has no phone number configured.`);
+                        return;
+                    }
+
+                    const dateString = new Date(date).toLocaleDateString("en-IN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric"
+                    });
+
+                    const messageBody = `Dear Parent,\n\nThis is to inform you that your ward, *${student.name}* (Roll No: *${student.rollNumber}*), was marked *ABSENT* today (${dateString}) at Nymph Classes.\n\nPlease contact the class administration if you have any questions.\n\nBest regards,\nNymph Classes`;
+
+                    await sendTextWhatsApp(student.phone, messageBody);
+                } catch (err) {
+                    console.error("❌ [WhatsApp] Background absentee send error:", err);
+                }
+            })();
+        }
     } catch (err) {
         if (err.code === 11000) {
             res.status(400);
@@ -33,6 +62,7 @@ export const markAttendance = asyncHandler(async (req, res) => {
 });
 
 export const updateAttendance = asyncHandler(async (req, res) => {
+    const { status, sendWhatsApp } = req.body;
     const updateData = req.body;
 
     const attendance = await Attendance.findByIdAndUpdate(
@@ -42,6 +72,33 @@ export const updateAttendance = asyncHandler(async (req, res) => {
     );
 
     res.json({ message: "Attendance updated", attendance });
+
+    // Send WhatsApp if status is Absent and sendWhatsApp is true
+    if (status === "Absent" && sendWhatsApp) {
+        (async () => {
+            try {
+                const student = await Student.findById(attendance.studentId);
+                if (!student || !student.phone) return;
+
+                if (!getWhatsAppStatus()) {
+                    console.warn(`⚠️ [WhatsApp] Cannot send absentee update notification for ${student.name}. Client is not ready.`);
+                    return;
+                }
+
+                const dateString = new Date(attendance.date).toLocaleDateString("en-IN", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric"
+                });
+
+                const messageBody = `Dear Parent,\n\nThis is to inform you that your ward, *${student.name}* (Roll No: *${student.rollNumber}*), was marked *ABSENT* today (${dateString}) at Nymph Classes.\n\nPlease contact the class administration if you have any questions.\n\nBest regards,\nNymph Classes`;
+
+                await sendTextWhatsApp(student.phone, messageBody);
+            } catch (err) {
+                console.error("❌ [WhatsApp] Background absentee update error:", err);
+            }
+        })();
+    }
 });
 
 export const getAttendanceByDate = asyncHandler(async (req, res) => {
