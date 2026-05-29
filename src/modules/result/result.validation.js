@@ -7,9 +7,10 @@ export const createResultSchema = Joi.object({
     subjects: Joi.array().items(
         Joi.object({
             name: Joi.string().required(),
-            marksObtained: Joi.number().required(),
+            marksObtained: Joi.number().allow("", null).required(),
             totalMarks: Joi.number().required(),
         })
     ).required(),
     examDate: Joi.date().required(),
+    sendWhatsApp: Joi.boolean().optional(),
 });
