@@ -170,6 +170,11 @@ export const sendResultWhatsAppController = async (req, res) => {
 
 export const getWhatsAppStatusController = (req, res) => {
     try {
+        // Prevent any caching of the QR code/status
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+
         const isReady = getWhatsAppStatus();
         const qr = getWhatsAppQR();
 
