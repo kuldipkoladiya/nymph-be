@@ -13,12 +13,11 @@ export const markAttendance = asyncHandler(async (req, res) => {
     }
 
     try {
-        const attendance = await Attendance.create({
-            studentId,
-            date,
-            status,
-            remark
-        });
+        const attendance = await Attendance.findOneAndUpdate(
+            { studentId, date: new Date(date) },
+            { status, remark },
+            { new: true, upsert: true, setDefaultsOnInsert: true }
+        );
 
         res.status(201).json({
             message: "Attendance recorded",
