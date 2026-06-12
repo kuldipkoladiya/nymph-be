@@ -5,4 +5,5 @@ export const markAttendanceSchema = Joi.object({
     date: Joi.date().required(),
     status: Joi.string().valid("Present", "Absent", "Leave").required(),
     remark: Joi.string().allow(""),
+    sendWhatsApp: Joi.boolean(),
 });
