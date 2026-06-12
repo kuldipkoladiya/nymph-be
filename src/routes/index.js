@@ -18,7 +18,7 @@ router.use("/results", auth,resultRoutes);
 router.use("/attendance",auth, attendanceRoutes);
 router.use("/dashboard",auth, dashboardRoutes);
 router.use("/fees", auth,feeRoutes);
-router.use("/expense", auth,expenseRoutes);
+router.use("/expenses", auth,expenseRoutes);
 router.use("/weekly-test", auth,weeklyTestRoutes);
 
 export default  router;

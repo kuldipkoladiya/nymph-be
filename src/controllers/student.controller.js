@@ -6,6 +6,15 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 export const createStudent = asyncHandler(async (req, res) => {
     const data = req.body;
 
+    // Check if rollNumber already exists in the same standard
+    if (data.rollNumber && data.standard) {
+        const existing = await Student.findOne({ rollNumber: data.rollNumber, standard: data.standard });
+        if (existing) {
+            res.status(400);
+            throw new Error(`Roll number ${data.rollNumber} already exists in Class ${data.standard}.`);
+        }
+    }
+
     // without image
     const student = await Student.create(data);
     res.status(201).json({ message: "Student created", student });
@@ -65,6 +74,27 @@ export const updateStudent = asyncHandler(async (req, res) => {
 
     if (req.file) {
         data.image = "/uploads/students/" + req.file.filename;
+    }
+
+    // Check if updating to a duplicate roll number in the same standard
+    if (data.rollNumber || data.standard) {
+        const currentStudent = await Student.findById(req.params.id);
+        if (!currentStudent) {
+            res.status(404);
+            throw new Error("Student not found");
+        }
+        const rollToCheck = data.rollNumber !== undefined ? data.rollNumber : currentStudent.rollNumber;
+        const stdToCheck = data.standard !== undefined ? data.standard : currentStudent.standard;
+
+        const duplicate = await Student.findOne({
+            rollNumber: rollToCheck,
+            standard: stdToCheck,
+            _id: { $ne: req.params.id }
+        });
+        if (duplicate) {
+            res.status(400);
+            throw new Error(`Roll number ${rollToCheck} already exists in Class ${stdToCheck}.`);
+        }
     }
 
     const student = await Student.findByIdAndUpdate(
