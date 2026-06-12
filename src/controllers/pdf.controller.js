@@ -1,5 +1,6 @@
 import { renderToBuffer } from "@react-pdf/renderer";
 import { ResultPDF } from "../utils/ResultPDF.js";
+import { MonthlyResultPDF } from "../utils/MonthlyResultPDF.js";
 import Student from "../models/student.model.js";
 import Result from "../models/result.model.js";
 import mongoose from "mongoose";
@@ -206,6 +207,87 @@ export const getWhatsAppStatusController = (req, res) => {
         return res.status(500).json({
             success: false,
             error: "Failed to retrieve WhatsApp status."
+        });
+    }
+};
+
+export const generateMonthlyResultPDF = async (req, res) => {
+    try {
+        const { studentId, month, year } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(studentId)) {
+            return res.status(400).json({ error: "Invalid student ID" });
+        }
+
+        const student = await Student.findById(studentId).lean();
+        if (!student) {
+            return res.status(404).json({ error: "Student not found" });
+        }
+
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+        const results = await Result.find({
+            studentId,
+            examDate: { $gte: startDate, $lte: endDate }
+        }).lean();
+
+        let totalObtained = 0;
+        let totalMaximum = 0;
+        const examCount = results.length;
+
+        results.forEach(r => {
+            totalObtained += r.totalObtained || 0;
+            totalMaximum += r.totalMaximum || 0;
+        });
+
+        const percentage = totalMaximum > 0 ? Number(((totalObtained / totalMaximum) * 100).toFixed(2)) : 0;
+        
+        const calculateGrade = (pct) => {
+            if (pct >= 90) return "A+";
+            if (pct >= 80) return "A";
+            if (pct >= 70) return "B";
+            if (pct >= 60) return "C";
+            if (pct >= 50) return "D";
+            return "F";
+        };
+        const grade = totalMaximum > 0 ? calculateGrade(percentage) : "N/A";
+
+        const MONTHS = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ];
+        const monthLabel = MONTHS[parseInt(month) - 1] || "Selected Month";
+
+        const report = {
+            totalObtained,
+            totalMaximum,
+            percentage,
+            grade,
+            examCount,
+            results
+        };
+
+        const element = React.createElement(MonthlyResultPDF, {
+            student,
+            monthLabel,
+            year: parseInt(year),
+            report
+        });
+
+        const buffer = await renderToBuffer(element);
+
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader(
+            "Content-Disposition",
+            `attachment; filename="${student.name}_${monthLabel}_${year}_Monthly_Report.pdf"`
+        );
+
+        return res.send(buffer);
+    } catch (err) {
+        console.error("Monthly PDF generation failed:", err);
+        return res.status(500).json({
+            error: "Monthly PDF generation failed",
         });
     }
 };
