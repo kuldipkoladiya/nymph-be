@@ -12,7 +12,7 @@ export const createStudent = asyncHandler(async (req, res) => {
 });
 
 export const getStudents = asyncHandler(async (req, res) => {
-    const { standard, section, search } = req.query;
+    const { standard, section, search, page, limit, paginate } = req.query;
 
     const filter = {};
 
@@ -21,6 +21,26 @@ export const getStudents = asyncHandler(async (req, res) => {
 
     if (search) {
         filter.name = { $regex: search, $options: "i" };
+    }
+
+    if (paginate === "true") {
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(limit) || 15;
+        const skip = (pageNum - 1) * limitNum;
+
+        const students = await Student.find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum);
+
+        const total = await Student.countDocuments(filter);
+
+        return res.json({
+            students,
+            currentPage: pageNum,
+            totalPages: Math.ceil(total / limitNum),
+            totalStudents: total
+        });
     }
 
     const students = await Student.find(filter).sort({ createdAt: -1 });
