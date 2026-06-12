@@ -8,6 +8,7 @@ export const createStudentSchema = Joi.object({
     fatherName: Joi.string().optional(),
     motherName: Joi.string().optional(),
     phone: Joi.string().optional(),
+    secondPhone: Joi.string().optional().allow(""),
     address: Joi.string().optional(),
     dob: Joi.string().optional(),
 });
@@ -20,6 +21,7 @@ export const updateStudentSchema = Joi.object({
     fatherName: Joi.string().optional(),
     motherName: Joi.string().optional(),
     phone: Joi.string().optional(),
+    secondPhone: Joi.string().optional().allow(""),
     address: Joi.string().optional(),
     dob: Joi.string().optional(),
 }).unknown();

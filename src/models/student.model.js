@@ -9,6 +9,7 @@ const studentSchema = new mongoose.Schema(
         fatherName: { type: String },
         motherName: { type: String },
         phone: { type: String },
+        secondPhone: { type: String },
         address: { type: String },
         dob: { type: String },
         image: { type: String },                     // URL or local path

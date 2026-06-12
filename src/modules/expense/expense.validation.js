@@ -5,5 +5,6 @@ export const addExpenseSchema = Joi.object({
     amount: Joi.number().required(),
     category: Joi.string().required(),
     date: Joi.date().required(),
+    notes: Joi.string().allow(""),
     description: Joi.string().allow(""),
 });
