@@ -5,7 +5,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { ResultPDF } from "../utils/ResultPDF.js";
-import { sendResultWhatsApp, getWhatsAppStatus } from "../utils/whatsappSender.js";
+import { sendResultWhatsApp, sendTextWhatsApp, getWhatsAppStatus } from "../utils/whatsappSender.js";
 
 
 export const createResult = asyncHandler(async (req, res) => {
@@ -118,4 +118,138 @@ export const getStudentResults = asyncHandler(async (req, res) => {
 export const deleteResult = asyncHandler(async (req, res) => {
     await Result.findByIdAndDelete(req.params.id);
     res.json({ message: "Result deleted" });
+});
+
+export const getMonthlyReport = asyncHandler(async (req, res) => {
+    const { standard, month, year } = req.query;
+
+    if (!standard || !month || !year) {
+        res.status(400);
+        throw new Error("standard, month, and year are required");
+    }
+
+    const students = await Student.find({ standard }).lean();
+    const studentIds = students.map(s => s._id);
+
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+    const results = await Result.find({
+        studentId: { $in: studentIds },
+        examDate: { $gte: startDate, $lte: endDate }
+    }).lean();
+
+    const report = students.map(student => {
+        const studentResults = results.filter(r => r.studentId.toString() === student._id.toString());
+        
+        let totalObtained = 0;
+        let totalMaximum = 0;
+        const examCount = studentResults.length;
+
+        studentResults.forEach(r => {
+            totalObtained += r.totalObtained || 0;
+            totalMaximum += r.totalMaximum || 0;
+        });
+
+        const percentage = totalMaximum > 0 ? Number(((totalObtained / totalMaximum) * 100).toFixed(2)) : 0;
+        const grade = totalMaximum > 0 ? calculateGrade(percentage) : "N/A";
+
+        return {
+            student,
+            totalObtained,
+            totalMaximum,
+            percentage,
+            grade,
+            examCount,
+            results: studentResults
+        };
+    });
+
+    res.json({
+        standard,
+        month: parseInt(month),
+        year: parseInt(year),
+        report
+    });
+});
+
+export const sendMonthlyWhatsApp = asyncHandler(async (req, res) => {
+    const { studentId, month, year, totalObtained, totalMaximum, percentage, grade, examCount } = req.body;
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+        res.status(404);
+        throw new Error("Student not found");
+    }
+
+    if (!student.phone) {
+        res.status(400);
+        throw new Error(`Student ${student.name} does not have a phone number configured.`);
+    }
+
+    const dateString = new Date(year, month - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const messageBody = `Dear Parent,\n\nHere is the Monthly Performance Report of your ward, *${student.name}* (Roll No: *${student.rollNumber}*), for *${dateString}* at Nymph Classes:\n\n• Total Exams: ${examCount}\n• Total Marks: ${totalObtained} / ${totalMaximum}\n• Overall Percentage: ${percentage}%\n• Monthly Grade: ${grade}\n\nBest regards,\nNymph Classes`;
+
+    const sendResult = await sendTextWhatsApp(student.phone, messageBody);
+
+    if (!sendResult.success) {
+        res.status(500);
+        throw new Error(sendResult.error);
+    }
+
+    res.json({ success: true, message: "WhatsApp message sent successfully!" });
+});
+
+export const sendMonthlyWhatsAppBulk = asyncHandler(async (req, res) => {
+    const { standard, month, year } = req.body;
+
+    if (!standard || !month || !year) {
+        res.status(400);
+        throw new Error("standard, month, and year are required");
+    }
+
+    const students = await Student.find({ standard }).lean();
+    const studentIds = students.map(s => s._id);
+
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+    const results = await Result.find({
+        studentId: { $in: studentIds },
+        examDate: { $gte: startDate, $lte: endDate }
+    }).lean();
+
+    const dateString = new Date(year, month - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+    // Send messages sequentially/parallel
+    const sendPromises = students.map(async (student) => {
+        if (!student.phone) return { student: student.name, success: false, error: "No phone number" };
+
+        const studentResults = results.filter(r => r.studentId.toString() === student._id.toString());
+        
+        let totalObtained = 0;
+        let totalMaximum = 0;
+        const examCount = studentResults.length;
+
+        studentResults.forEach(r => {
+            totalObtained += r.totalObtained || 0;
+            totalMaximum += r.totalMaximum || 0;
+        });
+
+        const percentage = totalMaximum > 0 ? Number(((totalObtained / totalMaximum) * 100).toFixed(2)) : 0;
+        const grade = totalMaximum > 0 ? calculateGrade(percentage) : "N/A";
+
+        const messageBody = `Dear Parent,\n\nHere is the Monthly Performance Report of your ward, *${student.name}* (Roll No: *${student.rollNumber}*), for *${dateString}* at Nymph Classes:\n\n• Total Exams: ${examCount}\n• Total Marks: ${totalObtained} / ${totalMaximum}\n• Overall Percentage: ${percentage}%\n• Monthly Grade: ${grade}\n\nBest regards,\nNymph Classes`;
+
+        try {
+            const sendResult = await sendTextWhatsApp(student.phone, messageBody);
+            return { student: student.name, success: sendResult.success, error: sendResult.error };
+        } catch (err) {
+            return { student: student.name, success: false, error: err.message };
+        }
+    });
+
+    const reportResults = await Promise.all(sendPromises);
+
+    res.json({ success: true, message: "Bulk WhatsApp messages triggered!", report: reportResults });
 });

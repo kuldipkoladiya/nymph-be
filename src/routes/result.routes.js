@@ -4,6 +4,9 @@ import {
     updateResult,
     getStudentResults,
     deleteResult,
+    getMonthlyReport,
+    sendMonthlyWhatsApp,
+    sendMonthlyWhatsAppBulk,
 } from "../controllers/result.controller.js";
 import {generateResultPDF, getResultById, sendResultWhatsAppController, getWhatsAppStatusController} from "../controllers/pdf.controller.js";
 import validate from "../middlewares/validate.js";
@@ -13,6 +16,10 @@ import { authorize } from "../middlewares/authorize.js";
 const router = express.Router();
 
 router.use(authorize("results"));
+
+router.get("/monthly", getMonthlyReport);
+router.post("/monthly/send-whatsapp", sendMonthlyWhatsApp);
+router.post("/monthly/send-whatsapp-bulk", sendMonthlyWhatsAppBulk);
 
 router.post("/", validate(createResultSchema), createResult);
 router.put("/:id", updateResult);
