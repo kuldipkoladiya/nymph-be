@@ -11,26 +11,52 @@ if (process.env.VERCEL) {
         const { default: pkg } = await import("whatsapp-web.js");
         const { Client, LocalAuth } = pkg;
         const { default: qrcode } = await import("qrcode-terminal");
+        const { default: fs } = await import("fs");
 
         console.log("⏳ [WhatsApp] Initializing WhatsApp Web Client...");
+
+        // Determine chromium executable path dynamically (especially for VPS vs Local Windows/macOS)
+        let executablePath = undefined;
+        if (process.platform === "linux") {
+            const possiblePaths = [
+                "/usr/bin/chromium-browser",
+                "/usr/bin/chromium",
+                "/usr/bin/google-chrome",
+                "/usr/bin/google-chrome-stable"
+            ];
+            for (const path of possiblePaths) {
+                if (fs.existsSync(path)) {
+                    executablePath = path;
+                    break;
+                }
+            }
+            if (!executablePath) {
+                console.log("⚠️ [WhatsApp] Linux detected but no standard Chromium/Chrome binary found in /usr/bin. Falling back to default puppeteer chrome.");
+            }
+        }
+
+        const puppeteerConfig = {
+            headless: true,
+            args: [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-accelerated-2d-canvas",
+                "--no-first-run",
+                "--no-zygote",
+                "--disable-gpu"
+            ]
+        };
+
+        if (executablePath) {
+            puppeteerConfig.executablePath = executablePath;
+        }
 
         client = new Client({
             authStrategy: new LocalAuth({
                 clientId: "nymph-classes-session"
             }),
-            puppeteer: {
-                headless: true,
-                executablePath: "/usr/bin/chromium-browser",
-                args: [
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-accelerated-2d-canvas",
-                    "--no-first-run",
-                    "--no-zygote",
-                    "--disable-gpu"
-                ]
-            }
+            puppeteer: puppeteerConfig
         });
 
         client.on("qr", (qr) => {
