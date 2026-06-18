@@ -6,6 +6,7 @@ import Result from "../models/result.model.js";
 import mongoose from "mongoose";
 import React from "react";
 import { sendResultWhatsApp, getWhatsAppStatus, getWhatsAppQR } from "../utils/whatsappSender.js";
+import whatsappClient from "../config/whatsapp.js";
 
 export const generateResultPDF = async (req, res) => {
     try {
@@ -180,10 +181,17 @@ export const getWhatsAppStatusController = (req, res) => {
         const qr = getWhatsAppQR();
 
         if (isReady) {
+            const deviceInfo = whatsappClient && whatsappClient.info ? {
+                pushname: whatsappClient.info.pushname,
+                number: whatsappClient.info.wid?.user || whatsappClient.info.me?.user,
+                platform: whatsappClient.info.platform
+            } : null;
+
             return res.status(200).json({ 
                 success: true,
                 status: "authenticated", 
-                message: "WhatsApp is ready and connected!" 
+                message: "WhatsApp is ready and connected!",
+                deviceInfo
             });
         }
 
