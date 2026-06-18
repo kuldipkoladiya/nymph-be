@@ -221,9 +221,13 @@ export const sendMonthlyWhatsAppBulk = asyncHandler(async (req, res) => {
 
     const dateString = new Date(year, month - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
-    // Send messages sequentially/parallel
-    const sendPromises = students.map(async (student) => {
-        if (!student.phone) return { student: student.name, success: false, error: "No phone number" };
+    // Send messages sequentially to prevent CPU/memory spikes and WhatsApp account bans
+    const reportResults = [];
+    for (const student of students) {
+        if (!student.phone) {
+            reportResults.push({ student: student.name, success: false, error: "No phone number" });
+            continue;
+        }
 
         const studentResults = results.filter(r => r.studentId.toString() === student._id.toString());
         
@@ -243,13 +247,14 @@ export const sendMonthlyWhatsAppBulk = asyncHandler(async (req, res) => {
 
         try {
             const sendResult = await sendTextWhatsApp(student.phone, messageBody);
-            return { student: student.name, success: sendResult.success, error: sendResult.error };
+            reportResults.push({ student: student.name, success: sendResult.success, error: sendResult.error });
         } catch (err) {
-            return { student: student.name, success: false, error: err.message };
+            reportResults.push({ student: student.name, success: false, error: err.message });
         }
-    });
 
-    const reportResults = await Promise.all(sendPromises);
+        // Delay 2.5 seconds between each message
+        await new Promise(resolve => setTimeout(resolve, 2500));
+    }
 
-    res.json({ success: true, message: "Bulk WhatsApp messages triggered!", report: reportResults });
+    res.json({ success: true, message: "Bulk WhatsApp messages completed!", report: reportResults });
 });

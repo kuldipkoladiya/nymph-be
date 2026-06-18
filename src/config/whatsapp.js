@@ -70,4 +70,20 @@ if (process.env.VERCEL) {
 
 export const getWhatsAppStatus = () => isReady;
 export const getWhatsAppQR = () => latestQR;
+export const logoutWhatsApp = async () => {
+    if (client) {
+        try {
+            await client.logout();
+            isReady = false;
+            latestQR = null;
+            return { success: true, message: "Logged out successfully." };
+        } catch (error) {
+            console.error("❌ [WhatsApp] Logout error:", error);
+            isReady = false;
+            latestQR = null;
+            return { success: false, error: error.message };
+        }
+    }
+    return { success: false, error: "WhatsApp client not initialized." };
+};
 export default client;

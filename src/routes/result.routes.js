@@ -8,7 +8,7 @@ import {
     sendMonthlyWhatsApp,
     sendMonthlyWhatsAppBulk,
 } from "../controllers/result.controller.js";
-import {generateResultPDF, generateMonthlyResultPDF, getResultById, sendResultWhatsAppController, getWhatsAppStatusController} from "../controllers/pdf.controller.js";
+import {generateResultPDF, generateMonthlyResultPDF, getResultById, sendResultWhatsAppController, getWhatsAppStatusController, logoutWhatsAppController} from "../controllers/pdf.controller.js";
 import validate from "../middlewares/validate.js";
 import {createResultSchema} from "../modules/result/result.validation.js";
 import { authorize } from "../middlewares/authorize.js";
@@ -30,4 +30,5 @@ router.get("/pdf/:studentId/:examId", generateResultPDF);
 router.post("/send-whatsapp/:studentId/:examId", sendResultWhatsAppController);
 router.get("/id/:resultId",  getResultById);
 router.get("/whatsapp-status", getWhatsAppStatusController);
+router.post("/whatsapp-logout", logoutWhatsAppController);
 export default router;

@@ -6,7 +6,7 @@ import Result from "../models/result.model.js";
 import mongoose from "mongoose";
 import React from "react";
 import { sendResultWhatsApp, getWhatsAppStatus, getWhatsAppQR } from "../utils/whatsappSender.js";
-import whatsappClient from "../config/whatsapp.js";
+import whatsappClient, { logoutWhatsApp } from "../config/whatsapp.js";
 
 export const generateResultPDF = async (req, res) => {
     try {
@@ -215,6 +215,22 @@ export const getWhatsAppStatusController = (req, res) => {
         return res.status(500).json({
             success: false,
             error: "Failed to retrieve WhatsApp status."
+        });
+    }
+};
+
+export const logoutWhatsAppController = async (req, res) => {
+    try {
+        const result = await logoutWhatsApp();
+        if (result.success) {
+            return res.status(200).json(result);
+        }
+        return res.status(400).json(result);
+    } catch (error) {
+        console.error("logoutWhatsAppController Error:", error);
+        return res.status(550).json({
+            success: false,
+            error: error.message || "Failed to logout from WhatsApp."
         });
     }
 };
