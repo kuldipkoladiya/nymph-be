@@ -43,7 +43,7 @@ export const markAttendance = asyncHandler(async (req, res) => {
                         year: "numeric"
                     });
 
-                    const messageBody = `Dear Parent,\n\nThis is to inform you that your ward, *${student.name}* (Roll No: *${student.rollNumber}*), was marked *ABSENT* today (${dateString}) at Nymph Classes.\n\nPlease contact the class administration if you have any questions.\n\nBest regards,\nNymph Classes`;
+                    const messageBody = `વાલીશ્રી,\n\nઆપને જણાવવાનું કે આપનો બાળક, *${student.name}* (રોલ નંબર: *${student.rollNumber}*), આજે (${dateString}) Nymph Classes માં *ગેરહાજર* રહેલ છે.\n\nજો આપને કોઈ પ્રશ્ન હોય તો મહેરબાની કરીને ક્લાસના વહીવટી વિભાગનો સંપર્ક કરો.\n\nશુભેચ્છા સહ,\nNymph Classes`;
 
                     await sendTextWhatsApp(student.phone, messageBody);
                 } catch (err) {
@@ -90,7 +90,7 @@ export const updateAttendance = asyncHandler(async (req, res) => {
                     year: "numeric"
                 });
 
-                const messageBody = `Dear Parent,\n\nThis is to inform you that your ward, *${student.name}* (Roll No: *${student.rollNumber}*), was marked *ABSENT* today (${dateString}) at Nymph Classes.\n\nPlease contact the class administration if you have any questions.\n\nBest regards,\nNymph Classes`;
+                const messageBody = `વાલીશ્રી,\n\nઆપને જણાવવાનું કે આપનો બાળક, *${student.name}* (રોલ નંબર: *${student.rollNumber}*), આજે (${dateString}) Nymph Classes માં *ગેરહાજર* રહેલ છે.\n\nજો આપને કોઈ પ્રશ્ન હોય તો મહેરબાની કરીને ક્લાસના વહીવટી વિભાગનો સંપર્ક કરો.\n\nશુભેચ્છા સહ,\nNymph Classes`;
 
                 await sendTextWhatsApp(student.phone, messageBody);
             } catch (err) {

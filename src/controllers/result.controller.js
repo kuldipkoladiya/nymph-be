@@ -5,6 +5,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { ResultPDF } from "../utils/ResultPDF.js";
+import { MonthlyResultPDF } from "../utils/MonthlyResultPDF.js";
 import { sendResultWhatsApp, sendTextWhatsApp, getWhatsAppStatus } from "../utils/whatsappSender.js";
 
 
@@ -190,7 +191,40 @@ export const sendMonthlyWhatsApp = asyncHandler(async (req, res) => {
     const dateString = new Date(year, month - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
     const messageBody = `Dear Parent,\n\nHere is the Monthly Performance Report of your ward, *${student.name}* (Roll No: *${student.rollNumber}*), for *${dateString}* at Nymph Classes:\n\n• Total Exams: ${examCount}\n• Total Marks: ${totalObtained} / ${totalMaximum}\n• Overall Percentage: ${percentage}%\n• Monthly Grade: ${grade}\n\nBest regards,\nNymph Classes`;
 
-    const sendResult = await sendTextWhatsApp(student.phone, messageBody);
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+    const results = await Result.find({
+        studentId,
+        examDate: { $gte: startDate, $lte: endDate }
+    }).lean();
+
+    const MONTHS = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+    const monthLabel = MONTHS[parseInt(month) - 1] || "Selected Month";
+
+    const report = {
+        totalObtained,
+        totalMaximum,
+        percentage,
+        grade,
+        examCount,
+        results
+    };
+
+    const element = React.createElement(MonthlyResultPDF, {
+        student,
+        monthLabel,
+        year: parseInt(year),
+        report
+    });
+
+    const buffer = await renderToBuffer(element);
+    const filename = `${student.name.replace(/\s+/g, "_")}_${monthLabel}_${year}_Monthly_Report.pdf`;
+
+    const sendResult = await sendResultWhatsApp(student.phone, buffer, filename, messageBody);
 
     if (!sendResult.success) {
         res.status(500);
@@ -220,6 +254,11 @@ export const sendMonthlyWhatsAppBulk = asyncHandler(async (req, res) => {
     }).lean();
 
     const dateString = new Date(year, month - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const MONTHS = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+    const monthLabel = MONTHS[parseInt(month) - 1] || "Selected Month";
 
     // Send messages sequentially to prevent CPU/memory spikes and WhatsApp account bans
     const reportResults = [];
@@ -245,8 +284,26 @@ export const sendMonthlyWhatsAppBulk = asyncHandler(async (req, res) => {
 
         const messageBody = `Dear Parent,\n\nHere is the Monthly Performance Report of your ward, *${student.name}* (Roll No: *${student.rollNumber}*), for *${dateString}* at Nymph Classes:\n\n• Total Exams: ${examCount}\n• Total Marks: ${totalObtained} / ${totalMaximum}\n• Overall Percentage: ${percentage}%\n• Monthly Grade: ${grade}\n\nBest regards,\nNymph Classes`;
 
+        const report = {
+            totalObtained,
+            totalMaximum,
+            percentage,
+            grade,
+            examCount,
+            results: studentResults
+        };
+
         try {
-            const sendResult = await sendTextWhatsApp(student.phone, messageBody);
+            const element = React.createElement(MonthlyResultPDF, {
+                student,
+                monthLabel,
+                year: parseInt(year),
+                report
+            });
+            const buffer = await renderToBuffer(element);
+            const filename = `${student.name.replace(/\s+/g, "_")}_${monthLabel}_${year}_Monthly_Report.pdf`;
+
+            const sendResult = await sendResultWhatsApp(student.phone, buffer, filename, messageBody);
             reportResults.push({ student: student.name, success: sendResult.success, error: sendResult.error });
         } catch (err) {
             reportResults.push({ student: student.name, success: false, error: err.message });

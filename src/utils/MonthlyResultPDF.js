@@ -5,107 +5,191 @@ import {
     Text,
     View,
     StyleSheet,
+    Image,
 } from "@react-pdf/renderer";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const logoPath = path.join(__dirname, "../assets/logo.png");
 
 const styles = StyleSheet.create({
     page: {
-        padding: 30,
-        fontSize: 11,
+        padding: 40,
+        fontSize: 10,
         fontFamily: "Helvetica",
+        color: "#1e293b",
+        backgroundColor: "#ffffff",
     },
-    header: {
-        textAlign: "center",
+    headerContainer: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        borderBottom: "2 solid #1e3a8a",
+        paddingBottom: 15,
         marginBottom: 20,
-        borderBottom: "2 solid #333",
-        paddingBottom: 10,
+    },
+    logo: {
+        width: 55,
+        height: 55,
+        objectFit: "contain",
+    },
+    headerTextContainer: {
+        textAlign: "right",
     },
     title: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: "bold",
-        color: "#2563eb",
+        color: "#1e3a8a",
     },
     subTitle: {
-        fontSize: 12,
-        marginTop: 5,
+        fontSize: 10,
+        color: "#64748b",
+        marginTop: 2,
         textTransform: "uppercase",
         letterSpacing: 1.5,
-        color: "#555",
     },
     infoGrid: {
         flexDirection: "row",
         justifyContent: "space-between",
         marginBottom: 20,
-        borderBottom: "1 solid #eee",
-        paddingBottom: 15,
+        backgroundColor: "#f8fafc",
+        border: "1 solid #e2e8f0",
+        borderRadius: 8,
+        padding: 12,
     },
     infoLeft: {
-        width: "50%",
+        width: "48%",
     },
     infoRight: {
-        width: "50%",
-        textAlign: "right",
+        width: "48%",
+        borderLeft: "1 solid #e2e8f0",
+        paddingLeft: 15,
     },
-    sectionTitle: {
+    infoSectionLabel: {
+        fontSize: 7.5,
+        color: "#64748b",
+        textTransform: "uppercase",
+        fontWeight: "bold",
+        marginBottom: 6,
+    },
+    infoLabel: {
+        fontSize: 8,
+        color: "#64748b",
+        marginTop: 4,
+    },
+    infoValue: {
+        fontSize: 10,
+        fontWeight: "bold",
+        color: "#0f172a",
+    },
+    infoValuePrimary: {
         fontSize: 12,
         fontWeight: "bold",
-        marginBottom: 10,
+        color: "#1e3a8a",
+        marginTop: 2,
+    },
+    sectionTitle: {
+        fontSize: 11,
+        fontWeight: "bold",
+        color: "#1e3a8a",
         textTransform: "uppercase",
         letterSpacing: 1,
-        color: "#333",
-        borderBottom: "1 solid #333",
+        borderBottom: "1 solid #1e3a8a",
         paddingBottom: 4,
+        marginBottom: 12,
+        marginTop: 10,
     },
     examBlock: {
         marginBottom: 15,
-        borderBottom: "1 dashed #eee",
-        paddingBottom: 10,
+        border: "1 solid #e2e8f0",
+        borderRadius: 6,
+        overflow: "hidden",
     },
     examHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
-        marginBottom: 6,
+        alignItems: "center",
+        backgroundColor: "#f1f5f9",
+        padding: 6,
+        borderBottom: "1 solid #e2e8f0",
     },
     examName: {
         fontWeight: "bold",
-        fontSize: 11,
+        fontSize: 10,
         color: "#1e293b",
     },
     examDate: {
-        fontSize: 9,
+        fontSize: 8.5,
         color: "#64748b",
     },
     tableHeader: {
         flexDirection: "row",
         backgroundColor: "#f8fafc",
         borderBottom: "1 solid #e2e8f0",
-        padding: 4,
+        padding: 6,
     },
     tableRow: {
         flexDirection: "row",
         borderBottom: "1 solid #f1f5f9",
-        padding: 4,
+        padding: 6,
+    },
+    tableRowEven: {
+        flexDirection: "row",
+        backgroundColor: "#f8fafc",
+        borderBottom: "1 solid #f1f5f9",
+        padding: 6,
     },
     cellSubject: {
         width: "50%",
-        fontSize: 10,
+        fontSize: 9.5,
     },
     cellObtained: {
         width: "25%",
         textAlign: "center",
-        fontSize: 10,
+        fontSize: 9.5,
         fontWeight: "bold",
         color: "#2563eb",
     },
     cellMax: {
         width: "25%",
         textAlign: "right",
-        fontSize: 10,
+        fontSize: 9.5,
+    },
+    cellHeaderSubject: {
+        width: "50%",
+        fontSize: 8.5,
+        fontWeight: "bold",
+        color: "#64748b",
+        textTransform: "uppercase",
+    },
+    cellHeaderObtained: {
+        width: "25%",
+        textAlign: "center",
+        fontSize: 8.5,
+        fontWeight: "bold",
+        color: "#64748b",
+        textTransform: "uppercase",
+    },
+    cellHeaderMax: {
+        width: "25%",
+        textAlign: "right",
+        fontSize: 8.5,
+        fontWeight: "bold",
+        color: "#64748b",
+        textTransform: "uppercase",
     },
     footer: {
-        marginTop: 40,
+        position: "absolute",
+        bottom: 25,
+        left: 40,
+        right: 40,
+        borderTop: "1 solid #e2e8f0",
+        paddingTop: 10,
         flexDirection: "row",
         justifyContent: "space-between",
-        alignItems: "flex-end",
+        alignItems: "center",
     },
     footerNote: {
         fontSize: 8,
@@ -113,16 +197,18 @@ const styles = StyleSheet.create({
         width: "60%",
         fontStyle: "italic",
     },
-    signArea: {
-        width: "30%",
+    signatureContainer: {
         textAlign: "center",
+        width: 120,
     },
-    line: {
-        borderTop: "1 solid #333",
-        marginTop: 20,
-        marginBottom: 4,
+    signatureLine: {
+        borderTop: "1 solid #94a3b8",
+        marginTop: 15,
+        paddingTop: 2,
     },
-    bold: {
+    signatureText: {
+        fontSize: 8,
+        color: "#64748b",
         fontWeight: "bold",
     }
 });
@@ -135,12 +221,17 @@ export function MonthlyResultPDF({ student, monthLabel, year, report }) {
             Page,
             { size: "A4", style: styles.page },
 
-            // HEADER
+            // HEADER CONTAINER WITH LOGO
             React.createElement(
                 View,
-                { style: styles.header },
-                React.createElement(Text, { style: styles.title }, "Nymph Classes"),
-                React.createElement(Text, { style: styles.subTitle }, "Monthly Performance Report")
+                { style: styles.headerContainer },
+                React.createElement(Image, { style: styles.logo, src: logoPath }),
+                React.createElement(
+                    View,
+                    { style: styles.headerTextContainer },
+                    React.createElement(Text, { style: styles.title }, "Nymph Classes"),
+                    React.createElement(Text, { style: styles.subTitle }, `Monthly Report - ${monthLabel} ${year}`)
+                )
             ),
 
             // INFO GRID
@@ -150,19 +241,30 @@ export function MonthlyResultPDF({ student, monthLabel, year, report }) {
                 React.createElement(
                     View,
                     { style: styles.infoLeft },
-                    React.createElement(Text, { style: { fontSize: 10, color: "#64748b", textTransform: "uppercase" } }, "Student Details"),
-                    React.createElement(Text, { style: { fontSize: 14, fontWeight: "bold", marginTop: 4 } }, student.name),
-                    React.createElement(Text, { style: { marginTop: 4 } }, `Roll No: ${student.rollNumber}`),
-                    React.createElement(Text, { style: { marginTop: 2 } }, `Standard: Std ${student.standard}`)
+                    React.createElement(Text, { style: styles.infoSectionLabel }, "Student Details"),
+                    React.createElement(Text, { style: { fontSize: 13, fontWeight: "bold", color: "#0f172a" } }, student.name),
+                    React.createElement(Text, { style: { marginTop: 4, fontSize: 9.5 } }, `Roll No: ${student.rollNumber}`),
+                    React.createElement(Text, { style: { marginTop: 2, fontSize: 9.5 } }, `Standard: Std ${student.standard}`)
                 ),
                 React.createElement(
                     View,
                     { style: styles.infoRight },
-                    React.createElement(Text, { style: { fontSize: 10, color: "#64748b", textTransform: "uppercase" } }, "Summary Card"),
-                    React.createElement(Text, { style: { fontSize: 14, fontWeight: "bold", color: "#16a34a", marginTop: 4 } }, `Percentage: ${report.percentage}%`),
-                    React.createElement(Text, { style: { marginTop: 4 } }, `Monthly Grade: ${report.grade}`),
-                    React.createElement(Text, { style: { marginTop: 2 } }, `Total Exams: ${report.examCount}`),
-                    React.createElement(Text, { style: { marginTop: 2, fontSize: 9, color: "#64748b" } }, `Cumulative: ${report.totalObtained} / ${report.totalMaximum}`)
+                    React.createElement(Text, { style: styles.infoSectionLabel }, "Performance Summary"),
+                    React.createElement(
+                        Text,
+                        { style: styles.infoValuePrimary },
+                        `Percentage: ${report.percentage}%`
+                    ),
+                    React.createElement(
+                        Text,
+                        { style: { marginTop: 4, fontSize: 9.5, fontWeight: "bold" } },
+                        `Grade: ${report.grade}  |  Tests Written: ${report.examCount}`
+                    ),
+                    React.createElement(
+                        Text,
+                        { style: { marginTop: 2, fontSize: 9, color: "#64748b" } },
+                        `Cumulative Marks: ${report.totalObtained} / ${report.totalMaximum}`
+                    )
                 )
             ),
 
@@ -178,23 +280,31 @@ export function MonthlyResultPDF({ student, monthLabel, year, report }) {
                         View,
                         { style: styles.examHeader },
                         React.createElement(Text, { style: styles.examName }, r.examName),
-                        React.createElement(Text, { style: styles.examDate }, new Date(r.examDate).toLocaleDateString("en-IN"))
+                        React.createElement(
+                            Text,
+                            { style: styles.examDate },
+                            new Date(r.examDate).toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric"
+                            })
+                        )
                     ),
 
                     // Table Header
                     React.createElement(
                         View,
                         { style: styles.tableHeader },
-                        React.createElement(Text, { style: styles.cellSubject }, "Subject"),
-                        React.createElement(Text, { style: { ...styles.cellObtained, color: "#64748b" } }, "Marks Obtained"),
-                        React.createElement(Text, { style: styles.cellMax }, "Max Marks")
+                        React.createElement(Text, { style: styles.cellHeaderSubject }, "Subject"),
+                        React.createElement(Text, { style: styles.cellHeaderObtained }, "Obtained"),
+                        React.createElement(Text, { style: styles.cellHeaderMax }, "Max Marks")
                     ),
 
                     // Table Rows
                     ...r.subjects.map((s, idx) =>
                         React.createElement(
                             View,
-                            { style: styles.tableRow, key: idx },
+                            { style: idx % 2 === 0 ? styles.tableRowEven : styles.tableRow, key: idx },
                             React.createElement(Text, { style: styles.cellSubject }, s.name),
                             React.createElement(Text, { style: styles.cellObtained }, s.marksObtained),
                             React.createElement(Text, { style: styles.cellMax }, s.totalMarks)
@@ -203,7 +313,7 @@ export function MonthlyResultPDF({ student, monthLabel, year, report }) {
                 )
             ),
 
-            // SIGNATURE FOOTER
+            // SIGNATURE & FOOTER
             React.createElement(
                 View,
                 { style: styles.footer },
@@ -214,9 +324,12 @@ export function MonthlyResultPDF({ student, monthLabel, year, report }) {
                 ),
                 React.createElement(
                     View,
-                    { style: styles.signArea },
-                    React.createElement(View, { style: styles.line }),
-                    React.createElement(Text, { style: { fontSize: 9, fontWeight: "bold" } }, "Authorized Signatory")
+                    { style: styles.signatureContainer },
+                    React.createElement(
+                        View,
+                        { style: styles.signatureLine },
+                        React.createElement(Text, { style: styles.signatureText }, "Authorized Signatory")
+                    )
                 )
             )
         )
