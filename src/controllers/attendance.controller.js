@@ -43,7 +43,7 @@ export const markAttendance = asyncHandler(async (req, res) => {
                         year: "numeric"
                     });
 
-                    const messageBody = `વાલીશ્રી,\n\nઆપને જણાવવાનું કે આપનો બાળક, *${student.name}* (રોલ નંબર: *${student.rollNumber}*), આજે (${dateString}) Nymph Classes માં *ગેરહાજર* રહેલ છે.\n\nજો આપને કોઈ પ્રશ્ન હોય તો મહેરબાની કરીને ક્લાસના વહીવટી વિભાગનો સંપર્ક કરો.\n\nશુભેચ્છા સહ,\nNymph Classes`;
+                    const messageBody = `આદરણીય વાલીશ્રી,\nઆપને જણાવવાનું કે આપનું બાળક, *${student.name}* (રોલ નંબર: *${student.rollNumber}*), આજે (${dateString}) Nymph Classes માં *ગેરહાજર*  છે.\n\nકૃપા કરીને ગેરહાજરી અંગેની માહિતી સંસ્થાને આપશો.\n📞 વધુ માહિતી માટે સંસ્થાનો સંપર્ક કરો.\n\nઆભાર.\nNymph Classes`;
 
                     await sendTextWhatsApp(student.phone, messageBody);
                 } catch (err) {
