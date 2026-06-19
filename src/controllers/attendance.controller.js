@@ -144,15 +144,19 @@ export const getMonthlySummary = asyncHandler(async (req, res) => {
 });
 
 export const getAttendanceByDateAndStandard = asyncHandler(async (req, res) => {
-    const { date, standard } = req.query;
+    const { date, standard, section } = req.query;
 
     if (!date || !standard) {
         res.status(400);
         throw new Error("date and standard are required");
     }
 
-    // Get all students of that standard
-    const students = await Student.find({ standard });
+    // Get all students of that standard (and section, if provided)
+    const studentFilter = { standard };
+    if (section) {
+        studentFilter.section = section;
+    }
+    const students = await Student.find(studentFilter);
 
     const studentIds = students.map(s => s._id);
 
@@ -167,8 +171,13 @@ export const getAttendanceByDateAndStandard = asyncHandler(async (req, res) => {
 
 export const getAttendanceByStandard = asyncHandler(async (req, res) => {
     const { standard } = req.params;
+    const { section } = req.query;
 
-    const students = await Student.find({ standard });
+    const studentFilter = { standard };
+    if (section) {
+        studentFilter.section = section;
+    }
+    const students = await Student.find(studentFilter);
 
     const studentIds = students.map(s => s._id);
 
@@ -180,14 +189,18 @@ export const getAttendanceByStandard = asyncHandler(async (req, res) => {
 });
 
 export const getAttendanceByRange = asyncHandler(async (req, res) => {
-    const { standard, startDate, endDate } = req.query;
+    const { standard, startDate, endDate, section } = req.query;
 
     if (!standard || !startDate || !endDate) {
         res.status(400);
         throw new Error("standard, startDate, and endDate are required");
     }
 
-    const students = await Student.find({ standard });
+    const studentFilter = { standard };
+    if (section) {
+        studentFilter.section = section;
+    }
+    const students = await Student.find(studentFilter);
     const studentIds = students.map(s => s._id);
 
     const attendance = await Attendance.find({

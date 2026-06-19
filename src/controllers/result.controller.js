@@ -122,14 +122,18 @@ export const deleteResult = asyncHandler(async (req, res) => {
 });
 
 export const getMonthlyReport = asyncHandler(async (req, res) => {
-    const { standard, month, year } = req.query;
+    const { standard, month, year, section } = req.query;
 
     if (!standard || !month || !year) {
         res.status(400);
         throw new Error("standard, month, and year are required");
     }
 
-    const students = await Student.find({ standard }).lean();
+    const studentFilter = { standard };
+    if (section) {
+        studentFilter.section = section;
+    }
+    const students = await Student.find(studentFilter).lean();
     const studentIds = students.map(s => s._id);
 
     const startDate = new Date(year, month - 1, 1);
@@ -235,14 +239,18 @@ export const sendMonthlyWhatsApp = asyncHandler(async (req, res) => {
 });
 
 export const sendMonthlyWhatsAppBulk = asyncHandler(async (req, res) => {
-    const { standard, month, year } = req.body;
+    const { standard, month, year, section } = req.body;
 
     if (!standard || !month || !year) {
         res.status(400);
         throw new Error("standard, month, and year are required");
     }
 
-    const students = await Student.find({ standard }).lean();
+    const studentFilter = { standard };
+    if (section) {
+        studentFilter.section = section;
+    }
+    const students = await Student.find(studentFilter).lean();
     const studentIds = students.map(s => s._id);
 
     const startDate = new Date(year, month - 1, 1);

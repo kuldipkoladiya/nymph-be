@@ -113,8 +113,12 @@ export const deleteStudent = asyncHandler(async (req, res) => {
 });
 
 export const getStudentsByStandard = asyncHandler(async (req, res) => {
-    const students = await Student.find({ standard: req.params.standard })
-        .select("name rollNumber _id");
+    const filter = { standard: req.params.standard };
+    if (req.query.section) {
+        filter.section = req.query.section;
+    }
+    const students = await Student.find(filter)
+        .select("name rollNumber _id section");
 
     res.json({ students });
 });
