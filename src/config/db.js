@@ -26,6 +26,12 @@ const connectDB = async () => {
                     await db.collection("students").dropIndex("rollNumber_1");
                     console.log("✅ Successfully dropped old unique index rollNumber_1.");
                 }
+                const compoundIndex = indexes.find(idx => idx.name === "rollNumber_1_standard_1");
+                if (compoundIndex) {
+                    console.log("🧹 Found old unique index rollNumber_1_standard_1. Dropping it...");
+                    await db.collection("students").dropIndex("rollNumber_1_standard_1");
+                    console.log("✅ Successfully dropped old unique index rollNumber_1_standard_1.");
+                }
             }
         } catch (err) {
             console.warn("⚠️ Failed to drop old student index:", err.message);

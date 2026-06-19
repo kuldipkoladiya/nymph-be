@@ -20,6 +20,6 @@ const studentSchema = new mongoose.Schema(
 studentSchema.index({ createdAt: -1 });
 studentSchema.index({ name: 1 });
 studentSchema.index({ standard: 1 });
-studentSchema.index({ rollNumber: 1, standard: 1 }, { unique: true });
+studentSchema.index({ rollNumber: 1, standard: 1, section: 1 }, { unique: true });
 
 export default mongoose.model("Student", studentSchema);

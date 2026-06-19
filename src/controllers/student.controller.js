@@ -6,12 +6,16 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 export const createStudent = asyncHandler(async (req, res) => {
     const data = req.body;
 
-    // Check if rollNumber already exists in the same standard
+    // Check if rollNumber already exists in the same standard and section
     if (data.rollNumber && data.standard) {
-        const existing = await Student.findOne({ rollNumber: data.rollNumber, standard: data.standard });
+        const query = { rollNumber: data.rollNumber, standard: data.standard };
+        if (data.section) {
+            query.section = data.section;
+        }
+        const existing = await Student.findOne(query);
         if (existing) {
             res.status(400);
-            throw new Error(`Roll number ${data.rollNumber} already exists in Class ${data.standard}.`);
+            throw new Error(`Roll number ${data.rollNumber} already exists in Class ${data.standard}${data.section ? ` (${data.section})` : ""}.`);
         }
     }
 
@@ -76,8 +80,8 @@ export const updateStudent = asyncHandler(async (req, res) => {
         data.image = "/uploads/students/" + req.file.filename;
     }
 
-    // Check if updating to a duplicate roll number in the same standard
-    if (data.rollNumber || data.standard) {
+    // Check if updating to a duplicate roll number in the same standard and section
+    if (data.rollNumber || data.standard || data.section) {
         const currentStudent = await Student.findById(req.params.id);
         if (!currentStudent) {
             res.status(404);
@@ -85,15 +89,21 @@ export const updateStudent = asyncHandler(async (req, res) => {
         }
         const rollToCheck = data.rollNumber !== undefined ? data.rollNumber : currentStudent.rollNumber;
         const stdToCheck = data.standard !== undefined ? data.standard : currentStudent.standard;
+        const secToCheck = data.section !== undefined ? data.section : currentStudent.section;
 
-        const duplicate = await Student.findOne({
+        const query = {
             rollNumber: rollToCheck,
             standard: stdToCheck,
             _id: { $ne: req.params.id }
-        });
+        };
+        if (secToCheck) {
+            query.section = secToCheck;
+        }
+
+        const duplicate = await Student.findOne(query);
         if (duplicate) {
             res.status(400);
-            throw new Error(`Roll number ${rollToCheck} already exists in Class ${stdToCheck}.`);
+            throw new Error(`Roll number ${rollToCheck} already exists in Class ${stdToCheck}${secToCheck ? ` (${secToCheck})` : ""}.`);
         }
     }
 
