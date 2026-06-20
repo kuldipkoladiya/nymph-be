@@ -8,6 +8,7 @@ const paymentSchema = new mongoose.Schema(
         paymentMode: { type: String, enum: ["Cash", "Online", "UPI", "Cheque", "Bank Transfer"], default: "Cash" },
 
         note: { type: String }, // optional remarks
+        standard: { type: String }, // standard at the time of payment
 
         receiptNo: { type: String, required: true },
         receiptPdf: { type: String },

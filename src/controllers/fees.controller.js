@@ -55,7 +55,7 @@ export const getStudentFeeStatus = asyncHandler(async (req, res) => {
         throw new Error("Fee structure missing for this standard");
     }
 
-    const payments = await Payment.find({ studentId });
+    const payments = await Payment.find({ studentId, standard: student.standard });
 
     const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
 
@@ -98,11 +98,12 @@ export const recordFeePayment = asyncHandler(async (req, res) => {
         amount,
         paymentMode,
         note,
+        standard: student.standard,
         receiptNo,
     });
 
     // Generate PDF Receipt Data
-    const status = await Payment.find({ studentId });
+    const status = await Payment.find({ studentId, standard: student.standard });
     const totalPaid = status.reduce((sum, p) => sum + p.amount, 0);
     const feeStructure = await FeeStructure.findOne({ standard: student.standard });
     
@@ -153,8 +154,19 @@ export const getPendingFeesStudents = asyncHandler(async (req, res) => {
         {
             $lookup: {
                 from: "payments",
-                localField: "_id",
-                foreignField: "studentId",
+                let: { studentId: "$_id", studentStd: "$standard" },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    { $eq: ["$studentId", "$$studentId"] },
+                                    { $eq: ["$standard", "$$studentStd"] }
+                                ]
+                            }
+                        }
+                    }
+                ],
                 as: "payments"
             }
         },
@@ -239,7 +251,7 @@ export const addPayment = asyncHandler(async (req, res) => {
 
     const totalFee = feeStructure.yearlyFee + otherFees;
 
-    const payments = await Payment.find({ studentId });
+    const payments = await Payment.find({ studentId, standard: student.standard });
     const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
 
     const remaining = totalFee - (totalPaid + amount);
@@ -247,6 +259,7 @@ export const addPayment = asyncHandler(async (req, res) => {
     const payment = await Payment.create({
         studentId,
         amount,
+        standard: student.standard,
         date: new Date(),
     });
 
@@ -301,9 +314,10 @@ export const getReceiptPdf = asyncHandler(async (req, res) => {
         res.status(404);
         throw new Error("Student associated with this payment not found");
     }
-    const payments = await Payment.find({ studentId: student._id });
+    const targetStd = payment.standard || student.standard;
+    const payments = await Payment.find({ studentId: student._id, standard: targetStd });
     const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-    const feeStructure = await FeeStructure.findOne({ standard: student.standard });
+    const feeStructure = await FeeStructure.findOne({ standard: targetStd });
 
     let otherFeesTotal = 0;
     let yearlyTotal = 0;

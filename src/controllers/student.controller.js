@@ -132,3 +132,49 @@ export const getStudentsByStandard = asyncHandler(async (req, res) => {
 
     res.json({ students });
 });
+
+export const bulkPromoteStudents = asyncHandler(async (req, res) => {
+    const { studentIds, targetStandard, targetSection, targetAcademicYear } = req.body;
+
+    if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
+        res.status(400);
+        throw new Error("studentIds array is required");
+    }
+    if (!targetStandard) {
+        res.status(400);
+        throw new Error("targetStandard is required");
+    }
+
+    // Process each student
+    for (const id of studentIds) {
+        const student = await Student.findById(id);
+        if (!student) continue;
+
+        const nextSection = targetSection !== undefined ? targetSection : student.section;
+
+        // Check if the roll number already exists in target standard/section for another student
+        const duplicate = await Student.findOne({
+            rollNumber: student.rollNumber,
+            standard: targetStandard,
+            section: nextSection,
+            _id: { $ne: student._id }
+        });
+
+        if (duplicate) {
+            res.status(400);
+            throw new Error(`Roll number ${student.rollNumber} already exists in Class ${targetStandard}${nextSection ? ` (${nextSection})` : ""} for another student (${duplicate.name}). Promotion aborted.`);
+        }
+
+        student.standard = targetStandard;
+        if (targetSection !== undefined) {
+            student.section = targetSection;
+        }
+        if (targetAcademicYear !== undefined) {
+            student.academicYear = targetAcademicYear;
+        }
+        await student.save();
+    }
+
+    res.json({ message: `Successfully promoted ${studentIds.length} students to Standard ${targetStandard}` });
+});
+

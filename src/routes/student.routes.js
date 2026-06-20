@@ -5,7 +5,8 @@ import {
     deleteStudent,
     getStudent,
     getStudents, getStudentsByStandard,
-    updateStudent
+    updateStudent,
+    bulkPromoteStudents
 } from "../controllers/student.controller.js";
 import validate from "../middlewares/validate.js";
 import upload from "../middlewares/upload.js";
@@ -34,5 +35,6 @@ router.put(
 
 router.delete("/:id", authorize("students"), deleteStudent);
 router.get("/by-standard/:standard", authorizeAny(["students", "attendance", "results", "fees"]), getStudentsByStandard);
+router.post("/bulk-promote", authorize("students"), bulkPromoteStudents);
 
 export default router;

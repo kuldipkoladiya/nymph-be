@@ -33,17 +33,8 @@ export const getFeesAnalytics = async (req, res) => {
         // 5️⃣ STANDARD-WISE COLLECTION
         const standardWise = await Payment.aggregate([
             {
-                $lookup: {
-                    from: "students",
-                    localField: "studentId",
-                    foreignField: "_id",
-                    as: "student",
-                },
-            },
-            { $unwind: "$student" },
-            {
                 $group: {
-                    _id: "$student.standard",
+                    _id: "$standard",
                     total: { $sum: "$amount" },
                 },
             },
@@ -61,7 +52,7 @@ export const getFeesAnalytics = async (req, res) => {
             const totalFee = fs.yearlyFee + otherFees;
 
             const studentPayments = payments.filter(
-                (p) => p.studentId.toString() === student._id.toString()
+                (p) => p.studentId.toString() === student._id.toString() && p.standard === student.standard
             );
 
             const paid = studentPayments.reduce((s, p) => s + p.amount, 0);

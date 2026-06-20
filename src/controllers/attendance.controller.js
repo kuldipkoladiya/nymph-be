@@ -15,7 +15,7 @@ export const markAttendance = asyncHandler(async (req, res) => {
     try {
         const attendance = await Attendance.findOneAndUpdate(
             { studentId, date: new Date(date) },
-            { status, remark },
+            { status, remark, standard: student.standard, section: student.section },
             { new: true, upsert: true, setDefaultsOnInsert: true }
         );
 
@@ -151,20 +151,15 @@ export const getAttendanceByDateAndStandard = asyncHandler(async (req, res) => {
         throw new Error("date and standard are required");
     }
 
-    // Get all students of that standard (and section, if provided)
-    const studentFilter = { standard };
-    if (section) {
-        studentFilter.section = section;
-    }
-    const students = await Student.find(studentFilter);
-
-    const studentIds = students.map(s => s._id);
-
-    // Get attendance records for those students
-    const attendance = await Attendance.find({
-        studentId: { $in: studentIds },
+    const query = {
+        standard,
         date: new Date(date)
-    }).populate("studentId");
+    };
+    if (section) {
+        query.section = section;
+    }
+
+    const attendance = await Attendance.find(query).populate("studentId");
 
     res.json(attendance);
 });
@@ -173,17 +168,12 @@ export const getAttendanceByStandard = asyncHandler(async (req, res) => {
     const { standard } = req.params;
     const { section } = req.query;
 
-    const studentFilter = { standard };
+    const query = { standard };
     if (section) {
-        studentFilter.section = section;
+        query.section = section;
     }
-    const students = await Student.find(studentFilter);
 
-    const studentIds = students.map(s => s._id);
-
-    const attendance = await Attendance.find({
-        studentId: { $in: studentIds }
-    }).populate("studentId");
+    const attendance = await Attendance.find(query).populate("studentId");
 
     res.json(attendance);
 });
@@ -196,20 +186,18 @@ export const getAttendanceByRange = asyncHandler(async (req, res) => {
         throw new Error("standard, startDate, and endDate are required");
     }
 
-    const studentFilter = { standard };
-    if (section) {
-        studentFilter.section = section;
-    }
-    const students = await Student.find(studentFilter);
-    const studentIds = students.map(s => s._id);
-
-    const attendance = await Attendance.find({
-        studentId: { $in: studentIds },
+    const query = {
+        standard,
         date: { 
             $gte: new Date(startDate), 
             $lte: new Date(endDate) 
         }
-    }).populate("studentId").sort({ date: 1 });
+    };
+    if (section) {
+        query.section = section;
+    }
+
+    const attendance = await Attendance.find(query).populate("studentId").sort({ date: 1 });
 
     res.json(attendance);
 });

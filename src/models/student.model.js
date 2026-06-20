@@ -6,6 +6,7 @@ const studentSchema = new mongoose.Schema(
         rollNumber: { type: String, required: true },
         standard: { type: String, required: true },  // 1,2,3,4,5,6...
         section: { type: String },                   // A, B, C...
+        academicYear: { type: String },              // e.g. 2025-26
         fatherName: { type: String },
         motherName: { type: String },
         phone: { type: String },
