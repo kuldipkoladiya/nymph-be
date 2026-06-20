@@ -50,28 +50,26 @@ export const getStudentFeeStatus = asyncHandler(async (req, res) => {
     }
 
     const structure = await FeeStructure.findOne({ standard: student.standard });
-    if (!structure) {
-        res.status(404);
-        throw new Error("Fee structure missing for this standard");
-    }
+    const yearlyFee = structure ? structure.yearlyFee : 0;
+    const otherFees = structure ? structure.otherFees : [];
 
     const payments = await Payment.find({ studentId, standard: student.standard });
 
     const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
 
-    const otherFeesTotal = structure.otherFees.reduce(
+    const otherFeesTotal = otherFees.reduce(
         (sum, f) => sum + f.amount,
         0
     );
 
-    const yearlyTotal = structure.yearlyFee + otherFeesTotal;
+    const yearlyTotal = yearlyFee + otherFeesTotal;
 
     const remaining = yearlyTotal - totalPaid;
 
     res.json({
         student,
-        yearlyFee: structure.yearlyFee,
-        otherFees: structure.otherFees,
+        yearlyFee,
+        otherFees,
         totalYearlyFee: yearlyTotal,
 
         totalPaid,
@@ -79,6 +77,7 @@ export const getStudentFeeStatus = asyncHandler(async (req, res) => {
         isFullyPaid: remaining <= 0,
 
         paymentHistory: payments,
+        warning: !structure ? `Fee structure missing for Standard ${student.standard}` : undefined
     });
 });
 
@@ -244,12 +243,11 @@ export const addPayment = asyncHandler(async (req, res) => {
         standard: student.standard,
     });
 
-    const otherFees = feeStructure.otherFees.reduce(
-        (sum, f) => sum + f.amount,
-        0
-    );
+    const otherFees = feeStructure
+        ? feeStructure.otherFees.reduce((sum, f) => sum + f.amount, 0)
+        : 0;
 
-    const totalFee = feeStructure.yearlyFee + otherFees;
+    const totalFee = feeStructure ? (feeStructure.yearlyFee + otherFees) : 0;
 
     const payments = await Payment.find({ studentId, standard: student.standard });
     const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
@@ -265,7 +263,7 @@ export const addPayment = asyncHandler(async (req, res) => {
 
     // CREATE PDF RECEIPT
     const pdfUrl = await generateFeeReceiptPDF(student, payment, {
-        yearlyFee: feeStructure.yearlyFee,
+        yearlyFee: feeStructure ? feeStructure.yearlyFee : 0,
         otherFees,
         totalFee,
         totalPaid: totalPaid + amount,
