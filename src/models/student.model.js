@@ -14,6 +14,15 @@ const studentSchema = new mongoose.Schema(
         address: { type: String },
         dob: { type: String },
         image: { type: String },                     // URL or local path
+        academicHistory: [
+            {
+                academicYear: { type: String },
+                standard: { type: String },
+                section: { type: String },
+                rollNumber: { type: String },
+                promotedAt: { type: Date, default: Date.now }
+            }
+        ]
     },
     { timestamps: true }
 );

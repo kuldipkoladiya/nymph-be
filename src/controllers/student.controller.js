@@ -25,15 +25,29 @@ export const createStudent = asyncHandler(async (req, res) => {
 });
 
 export const getStudents = asyncHandler(async (req, res) => {
-    const { standard, section, search, page, limit, paginate } = req.query;
+    const { standard, section, search, page, limit, paginate, academicYear } = req.query;
 
     const filter = {};
 
-    if (standard) filter.standard = standard;
-    if (section) filter.section = section;
-
     if (search) {
         filter.name = { $regex: search, $options: "i" };
+    }
+
+    if (academicYear || standard || section) {
+        const currentMatch = {};
+        if (academicYear) currentMatch.academicYear = academicYear;
+        if (standard) currentMatch.standard = standard;
+        if (section) currentMatch.section = section;
+
+        const historyMatch = {};
+        if (academicYear) historyMatch.academicYear = academicYear;
+        if (standard) historyMatch.standard = standard;
+        if (section) historyMatch.section = section;
+
+        filter.$or = [
+            currentMatch,
+            { academicHistory: { $elemMatch: historyMatch } }
+        ];
     }
 
     if (paginate === "true") {
@@ -131,9 +145,7 @@ export const getStudentsByStandard = asyncHandler(async (req, res) => {
         .select("name rollNumber _id section");
 
     res.json({ students });
-});
-
-export const bulkPromoteStudents = asyncHandler(async (req, res) => {
+});export const bulkPromoteStudents = asyncHandler(async (req, res) => {
     const { studentIds, targetStandard, targetSection, targetAcademicYear } = req.body;
 
     if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
@@ -165,6 +177,20 @@ export const bulkPromoteStudents = asyncHandler(async (req, res) => {
             throw new Error(`Roll number ${student.rollNumber} already exists in Class ${targetStandard}${nextSection ? ` (${nextSection})` : ""} for another student (${duplicate.name}). Promotion aborted.`);
         }
 
+        // Archive the current academic state before promoting
+        const historyEntry = {
+            academicYear: student.academicYear || "Pre-promotion",
+            standard: student.standard,
+            section: student.section,
+            rollNumber: student.rollNumber,
+            promotedAt: new Date()
+        };
+
+        if (!student.academicHistory) {
+            student.academicHistory = [];
+        }
+        student.academicHistory.push(historyEntry);
+
         student.standard = targetStandard;
         if (targetSection !== undefined) {
             student.section = targetSection;
@@ -177,4 +203,3 @@ export const bulkPromoteStudents = asyncHandler(async (req, res) => {
 
     res.json({ message: `Successfully promoted ${studentIds.length} students to Standard ${targetStandard}` });
 });
-
