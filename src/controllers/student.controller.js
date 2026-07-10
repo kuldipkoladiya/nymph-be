@@ -144,6 +144,13 @@ export const getStudentsByStandard = asyncHandler(async (req, res) => {
     const students = await Student.find(filter)
         .select("name rollNumber _id section");
 
+    // Sort students numerically by roll number
+    students.sort((a, b) => {
+        const rollA = parseInt(a.rollNumber) || 0;
+        const rollB = parseInt(b.rollNumber) || 0;
+        return rollA - rollB;
+    });
+
     res.json({ students });
 });export const bulkPromoteStudents = asyncHandler(async (req, res) => {
     const { studentIds, targetStandard, targetSection, targetAcademicYear } = req.body;
