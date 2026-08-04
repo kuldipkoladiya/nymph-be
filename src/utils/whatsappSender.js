@@ -51,8 +51,13 @@ export const sendResultWhatsApp = async (phone, pdfBuffer, filename, messageBody
             caption: messageBody
         });
 
-        console.log(`✅ Result PDF sent successfully! Message ID: ${response.id._serialized}`);
-        return { success: true, messageId: response.id._serialized };
+        if (response && response.id) {
+            console.log(`✅ Result PDF sent successfully! Message ID: ${response.id._serialized}`);
+            return { success: true, messageId: response.id._serialized };
+        } else {
+            console.warn(`⚠️ Result PDF sent, but response is empty or missing ID:`, response);
+            return { success: false, error: "Empty or invalid response from WhatsApp client." };
+        }
     } catch (error) {
         console.error("❌ Error sending WhatsApp message:", error);
         return { success: false, error: error.message };
@@ -80,8 +85,13 @@ export const sendTextWhatsApp = async (phone, messageBody) => {
 
         const response = await whatsappClient.sendMessage(formattedNumber, messageBody);
 
-        console.log(`✅ Text message sent successfully! Message ID: ${response.id._serialized}`);
-        return { success: true, messageId: response.id._serialized };
+        if (response && response.id) {
+            console.log(`✅ Text message sent successfully! Message ID: ${response.id._serialized}`);
+            return { success: true, messageId: response.id._serialized };
+        } else {
+            console.warn(`⚠️ Text message sent, but response is empty or missing ID:`, response);
+            return { success: false, error: "Empty or invalid response from WhatsApp client." };
+        }
     } catch (error) {
         console.error("❌ Error sending WhatsApp text message:", error);
         return { success: false, error: error.message };
