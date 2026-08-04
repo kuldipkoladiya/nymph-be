@@ -312,9 +312,9 @@ export const sendMonthlyWhatsAppBulk = asyncHandler(async (req, res) => {
             const filename = `${student.name.replace(/\s+/g, "_")}_${monthLabel}_${year}_Monthly_Report.pdf`;
 
             const sendResult = await sendResultWhatsApp(student.phone, buffer, filename, messageBody);
-            reportResults.push({ student: student.name, success: sendResult.success, error: sendResult.error });
+            reportResults.push({ student: student.name, phone: student.phone, success: sendResult.success, error: sendResult.error });
         } catch (err) {
-            reportResults.push({ student: student.name, success: false, error: err.message });
+            reportResults.push({ student: student.name, phone: student.phone, success: false, error: err.message });
         }
 
         // Delay 2.5 seconds between each message
