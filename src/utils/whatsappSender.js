@@ -56,7 +56,7 @@ export const sendResultWhatsApp = async (phone, pdfBuffer, filename, messageBody
             return { success: true, messageId: response.id._serialized };
         } else {
             console.warn(`⚠️ Result PDF sent, but response is empty or missing ID:`, response);
-            return { success: false, error: "WhatsApp number is not active or registered." };
+            return { success: true, messageId: null };
         }
     } catch (error) {
         console.error("❌ Error sending WhatsApp message:", error);
@@ -90,7 +90,7 @@ export const sendTextWhatsApp = async (phone, messageBody) => {
             return { success: true, messageId: response.id._serialized };
         } else {
             console.warn(`⚠️ Text message sent, but response is empty or missing ID:`, response);
-            return { success: false, error: "WhatsApp number is not active or registered." };
+            return { success: true, messageId: null };
         }
     } catch (error) {
         console.error("❌ Error sending WhatsApp text message:", error);
