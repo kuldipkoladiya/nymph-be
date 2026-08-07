@@ -210,3 +210,51 @@ export const getStudentsByStandard = asyncHandler(async (req, res) => {
 
     res.json({ message: `Successfully promoted ${studentIds.length} students to Standard ${targetStandard}` });
 });
+
+export const bulkUpdateStudents = asyncHandler(async (req, res) => {
+    const { students } = req.body;
+
+    if (!students || !Array.isArray(students)) {
+        res.status(400);
+        throw new Error("students array is required");
+    }
+
+    const results = [];
+
+    for (const item of students) {
+        const { _id, ...fields } = item;
+        if (!_id) continue;
+
+        if (fields.rollNumber || fields.standard || fields.section) {
+            const currentStudent = await Student.findById(_id);
+            if (currentStudent) {
+                const rollToCheck = fields.rollNumber !== undefined ? fields.rollNumber : currentStudent.rollNumber;
+                const stdToCheck = fields.standard !== undefined ? fields.standard : currentStudent.standard;
+                const secToCheck = fields.section !== undefined ? fields.section : currentStudent.section;
+
+                const query = {
+                    rollNumber: rollToCheck,
+                    standard: stdToCheck,
+                    _id: { $ne: _id }
+                };
+                if (secToCheck) {
+                    query.section = secToCheck;
+                }
+
+                const duplicate = await Student.findOne(query);
+                if (duplicate) {
+                    const beingUpdated = students.find(s => s._id === duplicate._id.toString());
+                    if (!beingUpdated || beingUpdated.rollNumber === rollToCheck) {
+                        res.status(400);
+                        throw new Error(`Roll number ${rollToCheck} already exists in Class ${stdToCheck}${secToCheck ? ` (${secToCheck})` : ""} for student "${duplicate.name}".`);
+                    }
+                }
+            }
+        }
+
+        const updated = await Student.findByIdAndUpdate(_id, fields, { new: true });
+        results.push(updated);
+    }
+
+    res.json({ message: `Successfully updated ${results.length} students`, students: results });
+});

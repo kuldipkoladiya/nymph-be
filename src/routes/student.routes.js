@@ -6,7 +6,8 @@ import {
     getStudent,
     getStudents, getStudentsByStandard,
     updateStudent,
-    bulkPromoteStudents
+    bulkPromoteStudents,
+    bulkUpdateStudents
 } from "../controllers/student.controller.js";
 import validate from "../middlewares/validate.js";
 import upload from "../middlewares/upload.js";
@@ -23,6 +24,7 @@ router.post(
 );
 
 router.get("/", authorizeAny(["students", "attendance", "results", "fees"]), getStudents);
+router.put("/bulk-update", authorize("students"), bulkUpdateStudents);
 router.get("/:id", authorizeAny(["students", "attendance", "results", "fees"]), getStudent);
 
 router.put(
