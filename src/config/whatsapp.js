@@ -37,6 +37,7 @@ if (process.env.VERCEL) {
 
         const puppeteerConfig = {
             headless: true,
+            protocolTimeout: 300000,
             args: [
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
