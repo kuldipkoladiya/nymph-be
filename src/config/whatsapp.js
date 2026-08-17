@@ -66,7 +66,11 @@ if (process.env.VERCEL) {
             authStrategy: new LocalAuth({
                 clientId: "nymph-classes-session"
             }),
-            puppeteer: puppeteerConfig
+            puppeteer: puppeteerConfig,
+            webVersionCache: {
+                type: "remote",
+                remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1018911162-alpha.html"
+            }
         });
 
         client.on("qr", (qr) => {

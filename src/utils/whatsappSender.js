@@ -35,19 +35,41 @@ export const sendResultWhatsApp = async (phone, pdfBuffer, filename, messageBody
             throw new Error("WhatsApp client is not authenticated or ready. Please scan the QR code first.");
         }
 
-        const formattedNumber = formatWhatsAppNumber(phone);
-        if (!formattedNumber) {
+        let cleaned = (phone || "").replace(/\D/g, "");
+        if (cleaned.length === 10) {
+            cleaned = "91" + cleaned;
+        }
+
+        if (!cleaned) {
             throw new Error("Invalid phone number provided.");
         }
 
-        console.log(`📤 Sending PDF Result via whatsapp-web.js to ${formattedNumber}...`);
+        // Verify contact on WhatsApp to get the exact JID
+        let targetChatId = `${cleaned}@c.us`;
+        try {
+            if (typeof whatsappClient.getNumberId === "function") {
+                const numberDetails = await whatsappClient.getNumberId(cleaned);
+                if (numberDetails && numberDetails._serialized) {
+                    targetChatId = numberDetails._serialized;
+                } else if (numberDetails === null) {
+                    throw new Error(`Phone number ${phone} is not active or registered on WhatsApp.`);
+                }
+            }
+        } catch (verr) {
+            if (verr.message && verr.message.includes("not active")) {
+                throw verr;
+            }
+            console.warn(`⚠️ [WhatsApp] getNumberId verification warning for ${cleaned}:`, verr.message);
+        }
+
+        console.log(`📤 Sending PDF Result via whatsapp-web.js to ${targetChatId}...`);
 
         // Convert the buffer to base64 for whatsapp-web.js MessageMedia
         const base64Data = pdfBuffer.toString("base64");
         const media = new MessageMedia("application/pdf", base64Data, filename);
 
         // Send message with media and caption (sendMediaAsDocument ensures fast PDF delivery)
-        const response = await whatsappClient.sendMessage(formattedNumber, media, {
+        const response = await whatsappClient.sendMessage(targetChatId, media, {
             caption: messageBody,
             sendMediaAsDocument: true
         });
@@ -77,14 +99,35 @@ export const sendTextWhatsApp = async (phone, messageBody) => {
             throw new Error("WhatsApp client is not authenticated or ready. Please scan the QR code first.");
         }
 
-        const formattedNumber = formatWhatsAppNumber(phone);
-        if (!formattedNumber) {
+        let cleaned = (phone || "").replace(/\D/g, "");
+        if (cleaned.length === 10) {
+            cleaned = "91" + cleaned;
+        }
+
+        if (!cleaned) {
             throw new Error("Invalid phone number provided.");
         }
 
-        console.log(`📤 Sending text message via whatsapp-web.js to ${formattedNumber}...`);
+        let targetChatId = `${cleaned}@c.us`;
+        try {
+            if (typeof whatsappClient.getNumberId === "function") {
+                const numberDetails = await whatsappClient.getNumberId(cleaned);
+                if (numberDetails && numberDetails._serialized) {
+                    targetChatId = numberDetails._serialized;
+                } else if (numberDetails === null) {
+                    throw new Error(`Phone number ${phone} is not active or registered on WhatsApp.`);
+                }
+            }
+        } catch (verr) {
+            if (verr.message && verr.message.includes("not active")) {
+                throw verr;
+            }
+            console.warn(`⚠️ [WhatsApp] getNumberId verification warning for ${cleaned}:`, verr.message);
+        }
 
-        const response = await whatsappClient.sendMessage(formattedNumber, messageBody);
+        console.log(`📤 Sending text message via whatsapp-web.js to ${targetChatId}...`);
+
+        const response = await whatsappClient.sendMessage(targetChatId, messageBody);
 
         if (response && response.id) {
             console.log(`✅ Text message sent successfully! Message ID: ${response.id._serialized}`);
