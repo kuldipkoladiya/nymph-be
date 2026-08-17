@@ -10,9 +10,18 @@ import {
 import path from "path";
 import { fileURLToPath } from "url";
 
+import fs from "fs";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const logoPath = path.join(__dirname, "../assets/logo.png");
+let logoSrc = logoPath;
+try {
+    const logoBuffer = fs.readFileSync(logoPath);
+    logoSrc = `data:image/png;base64,${logoBuffer.toString("base64")}`;
+} catch (e) {
+    logoSrc = logoPath;
+}
 
 const styles = StyleSheet.create({
     page: {
@@ -225,7 +234,7 @@ export function MonthlyResultPDF({ student, monthLabel, year, report }) {
             React.createElement(
                 View,
                 { style: styles.headerContainer },
-                React.createElement(Image, { style: styles.logo, src: logoPath }),
+                React.createElement(Image, { style: styles.logo, src: logoSrc }),
                 React.createElement(
                     View,
                     { style: styles.headerTextContainer },

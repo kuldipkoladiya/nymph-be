@@ -316,9 +316,8 @@ export const sendMonthlyWhatsAppBulk = asyncHandler(async (req, res) => {
         } catch (err) {
             reportResults.push({ student: student.name, phone: student.phone, success: false, error: err.message });
         }
-
-        // Delay 2.5 seconds between each message
-        await new Promise(resolve => setTimeout(resolve, 2500));
+        // Delay 1.2 seconds between each message (safe anti-flood delay while speeding up delivery)
+        await new Promise(resolve => setTimeout(resolve, 1200));
     }
 
     res.json({ success: true, message: "Bulk WhatsApp messages completed!", report: reportResults });

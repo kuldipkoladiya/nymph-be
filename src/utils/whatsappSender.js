@@ -46,9 +46,10 @@ export const sendResultWhatsApp = async (phone, pdfBuffer, filename, messageBody
         const base64Data = pdfBuffer.toString("base64");
         const media = new MessageMedia("application/pdf", base64Data, filename);
 
-        // Send message with media and caption
+        // Send message with media and caption (sendMediaAsDocument ensures fast PDF delivery)
         const response = await whatsappClient.sendMessage(formattedNumber, media, {
-            caption: messageBody
+            caption: messageBody,
+            sendMediaAsDocument: true
         });
 
         if (response && response.id) {

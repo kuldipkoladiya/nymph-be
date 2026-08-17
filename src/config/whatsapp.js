@@ -45,7 +45,16 @@ if (process.env.VERCEL) {
                 "--disable-accelerated-2d-canvas",
                 "--no-first-run",
                 "--no-zygote",
-                "--disable-gpu"
+                "--disable-gpu",
+                "--disable-background-timer-throttling",
+                "--disable-backgrounding-occluded-windows",
+                "--disable-renderer-backgrounding",
+                "--disable-ipc-flooding-protection",
+                "--disable-features=Translate,BackForwardCache,AcceptCHFrame,MediaRouter,OptimizationHints",
+                "--enable-features=NetworkService,NetworkServiceInProcess",
+                "--disable-extensions",
+                "--disable-default-apps",
+                "--mute-audio"
             ]
         };
 
