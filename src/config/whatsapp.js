@@ -50,11 +50,11 @@ if (process.env.VERCEL) {
                 "--disable-backgrounding-occluded-windows",
                 "--disable-renderer-backgrounding",
                 "--disable-ipc-flooding-protection",
-                "--disable-features=Translate,BackForwardCache,AcceptCHFrame,MediaRouter,OptimizationHints",
-                "--enable-features=NetworkService,NetworkServiceInProcess",
                 "--disable-extensions",
                 "--disable-default-apps",
-                "--mute-audio"
+                "--mute-audio",
+                "--single-process",
+                "--js-flags=--max-old-space-size=512"
             ]
         };
 
