@@ -39,6 +39,7 @@ if (process.env.VERCEL) {
 
         const puppeteerConfig = {
             headless: true,
+            bypassCSP: true,
             timeout: 90000,
             protocolTimeout: 180000,
             args: [
@@ -52,7 +53,8 @@ if (process.env.VERCEL) {
                 "--disable-extensions",
                 "--disable-default-apps",
                 "--mute-audio",
-                "--disable-site-isolation-trials"
+                "--disable-site-isolation-trials",
+                "--disable-web-security"
             ]
         };
 
@@ -66,8 +68,7 @@ if (process.env.VERCEL) {
             }),
             puppeteer: puppeteerConfig,
             webVersionCache: {
-                type: "remote",
-                remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1042411060-alpha.html"
+                type: "none"
             }
         });
 
@@ -102,9 +103,19 @@ if (process.env.VERCEL) {
             console.log("⚠️ [WhatsApp] Client disconnected:", reason);
         });
 
-        client.initialize().catch(err => {
-            console.error("❌ [WhatsApp] Initialization error:", err.message);
-        });
+        const initWhatsApp = async (retryCount = 0) => {
+            try {
+                await client.initialize();
+            } catch (err) {
+                console.error("❌ [WhatsApp] Initialization error:", err.message);
+                if (err.message.includes("Execution context was destroyed") && retryCount < 2) {
+                    console.log(`🔄 [WhatsApp] Page navigated during startup. Retrying client initialization (attempt ${retryCount + 1})...`);
+                    setTimeout(() => initWhatsApp(retryCount + 1), 3000);
+                }
+            }
+        };
+
+        initWhatsApp();
 
     } catch (err) {
         console.error("❌ [WhatsApp] Failed to load whatsapp-web.js:", err.message);
