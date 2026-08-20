@@ -37,6 +37,8 @@ if (process.env.VERCEL) {
             }
         }
 
+        const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+
         const puppeteerConfig = {
             headless: true,
             bypassCSP: true,
@@ -54,7 +56,8 @@ if (process.env.VERCEL) {
                 "--disable-default-apps",
                 "--mute-audio",
                 "--disable-site-isolation-trials",
-                "--disable-web-security"
+                "--disable-web-security",
+                `--user-agent=${userAgent}`
             ]
         };
 
@@ -66,10 +69,15 @@ if (process.env.VERCEL) {
             authStrategy: new LocalAuth({
                 clientId: "nymph-classes-session"
             }),
+            userAgent,
             puppeteer: puppeteerConfig,
             webVersionCache: {
                 type: "none"
             }
+        });
+
+        client.on("loading_screen", (percent, message) => {
+            console.log(`⏳ [WhatsApp] Loading screen: ${percent}% — ${message}`);
         });
 
         client.on("qr", (qr) => {
@@ -81,14 +89,18 @@ if (process.env.VERCEL) {
             console.log("\n==================================================================================\n");
         });
 
+        client.on("authenticated", () => {
+            console.log("🔐 [WhatsApp] Authenticated successfully!");
+        });
+
         client.on("ready", () => {
             isReady = true;
             latestQR = null;
             console.log("🚀 [WhatsApp] Client is ready and authenticated!");
         });
 
-        client.on("authenticated", () => {
-            console.log("🔐 [WhatsApp] Authenticated successfully!");
+        client.on("change_state", (state) => {
+            console.log(`🔄 [WhatsApp] State changed to: ${state}`);
         });
 
         client.on("auth_failure", (msg) => {
