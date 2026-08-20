@@ -47,8 +47,10 @@ export const generateResultPDF = async (req, res) => {
 
         return res.send(buffer);
     } catch (err) {
+        console.error("PDF generation failed:", err);
         return res.status(500).json({
             error: "PDF generation failed",
+            details: err.message
         });
     }
 };

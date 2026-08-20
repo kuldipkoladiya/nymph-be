@@ -37,7 +37,7 @@ if (process.env.VERCEL) {
 
         const puppeteerConfig = {
             headless: true,
-            protocolTimeout: 300000,
+            protocolTimeout: 120000,
             args: [
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
@@ -46,15 +46,14 @@ if (process.env.VERCEL) {
                 "--no-first-run",
                 "--no-zygote",
                 "--disable-gpu",
-                "--disable-background-timer-throttling",
-                "--disable-backgrounding-occluded-windows",
-                "--disable-renderer-backgrounding",
-                "--disable-ipc-flooding-protection",
                 "--disable-extensions",
                 "--disable-default-apps",
                 "--mute-audio",
-                "--single-process",
-                "--js-flags=--max-old-space-size=512"
+                "--disable-site-isolation-trials",
+                "--disable-background-timer-throttling",
+                "--disable-backgrounding-occluded-windows",
+                "--disable-renderer-backgrounding",
+                "--disable-ipc-flooding-protection"
             ]
         };
 
@@ -69,7 +68,7 @@ if (process.env.VERCEL) {
             puppeteer: puppeteerConfig,
             webVersionCache: {
                 type: "remote",
-                remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1018911162-alpha.html"
+                remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1042411060-alpha.html"
             }
         });
 
@@ -88,7 +87,13 @@ if (process.env.VERCEL) {
             console.log("🚀 [WhatsApp] Client is ready and authenticated!");
         });
 
+        client.on("authenticated", () => {
+            console.log("🔐 [WhatsApp] Authenticated successfully!");
+        });
+
         client.on("auth_failure", (msg) => {
+            isReady = false;
+            latestQR = null;
             console.error("❌ [WhatsApp] Authentication failure:", msg);
         });
 

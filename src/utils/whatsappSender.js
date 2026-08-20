@@ -5,6 +5,17 @@ import whatsappClient, { getWhatsAppStatus, getWhatsAppQR } from "../config/what
 export { getWhatsAppStatus, getWhatsAppQR };
 
 /**
+ * Helper to race any promise against a timeout
+ */
+const withTimeout = (promise, ms, timeoutErrorMsg) => {
+    let timer;
+    const timeoutPromise = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(timeoutErrorMsg)), ms);
+    });
+    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
+};
+
+/**
  * Clean and format phone number to WhatsApp format (e.g. 919876543210@c.us)
  */
 export const formatWhatsAppNumber = (phone) => {
@@ -31,7 +42,7 @@ export const formatWhatsAppNumber = (phone) => {
  */
 export const sendResultWhatsApp = async (phone, pdfBuffer, filename, messageBody) => {
     try {
-        if (!getWhatsAppStatus()) {
+        if (!getWhatsAppStatus() || !whatsappClient) {
             throw new Error("WhatsApp client is not authenticated or ready. Please scan the QR code first.");
         }
 
@@ -44,11 +55,15 @@ export const sendResultWhatsApp = async (phone, pdfBuffer, filename, messageBody
             throw new Error("Invalid phone number provided.");
         }
 
-        // Verify contact on WhatsApp to get the exact JID
+        // Verify contact on WhatsApp to get the exact JID with a 6-second timeout
         let targetChatId = `${cleaned}@c.us`;
         try {
             if (typeof whatsappClient.getNumberId === "function") {
-                const numberDetails = await whatsappClient.getNumberId(cleaned);
+                const numberDetails = await withTimeout(
+                    whatsappClient.getNumberId(cleaned),
+                    6000,
+                    "getNumberId verification timed out"
+                );
                 if (numberDetails && numberDetails._serialized) {
                     targetChatId = numberDetails._serialized;
                 } else if (numberDetails === null) {
@@ -68,11 +83,15 @@ export const sendResultWhatsApp = async (phone, pdfBuffer, filename, messageBody
         const base64Data = pdfBuffer.toString("base64");
         const media = new MessageMedia("application/pdf", base64Data, filename);
 
-        // Send message with media and caption (sendMediaAsDocument ensures fast PDF delivery)
-        const response = await whatsappClient.sendMessage(targetChatId, media, {
-            caption: messageBody,
-            sendMediaAsDocument: true
-        });
+        // Send message with media and caption with 45-second timeout protection
+        const response = await withTimeout(
+            whatsappClient.sendMessage(targetChatId, media, {
+                caption: messageBody,
+                sendMediaAsDocument: true
+            }),
+            45000,
+            "WhatsApp message delivery timed out after 45 seconds"
+        );
 
         if (response && response.id) {
             console.log(`✅ Result PDF sent successfully! Message ID: ${response.id._serialized}`);
@@ -82,8 +101,8 @@ export const sendResultWhatsApp = async (phone, pdfBuffer, filename, messageBody
             return { success: true, messageId: null };
         }
     } catch (error) {
-        console.error("❌ Error sending WhatsApp message:", error);
-        return { success: false, error: error.message };
+        console.error("❌ Error sending WhatsApp message:", error.message || error);
+        return { success: false, error: error.message || "Failed to send WhatsApp message" };
     }
 };
 
@@ -95,7 +114,7 @@ export const sendResultWhatsApp = async (phone, pdfBuffer, filename, messageBody
  */
 export const sendTextWhatsApp = async (phone, messageBody) => {
     try {
-        if (!getWhatsAppStatus()) {
+        if (!getWhatsAppStatus() || !whatsappClient) {
             throw new Error("WhatsApp client is not authenticated or ready. Please scan the QR code first.");
         }
 
@@ -111,7 +130,11 @@ export const sendTextWhatsApp = async (phone, messageBody) => {
         let targetChatId = `${cleaned}@c.us`;
         try {
             if (typeof whatsappClient.getNumberId === "function") {
-                const numberDetails = await whatsappClient.getNumberId(cleaned);
+                const numberDetails = await withTimeout(
+                    whatsappClient.getNumberId(cleaned),
+                    6000,
+                    "getNumberId verification timed out"
+                );
                 if (numberDetails && numberDetails._serialized) {
                     targetChatId = numberDetails._serialized;
                 } else if (numberDetails === null) {
@@ -127,7 +150,11 @@ export const sendTextWhatsApp = async (phone, messageBody) => {
 
         console.log(`📤 Sending text message via whatsapp-web.js to ${targetChatId}...`);
 
-        const response = await whatsappClient.sendMessage(targetChatId, messageBody);
+        const response = await withTimeout(
+            whatsappClient.sendMessage(targetChatId, messageBody),
+            25000,
+            "WhatsApp text delivery timed out after 25 seconds"
+        );
 
         if (response && response.id) {
             console.log(`✅ Text message sent successfully! Message ID: ${response.id._serialized}`);
@@ -137,7 +164,7 @@ export const sendTextWhatsApp = async (phone, messageBody) => {
             return { success: true, messageId: null };
         }
     } catch (error) {
-        console.error("❌ Error sending WhatsApp text message:", error);
-        return { success: false, error: error.message };
+        console.error("❌ Error sending WhatsApp text message:", error.message || error);
+        return { success: false, error: error.message || "Failed to send WhatsApp text message" };
     }
 };
