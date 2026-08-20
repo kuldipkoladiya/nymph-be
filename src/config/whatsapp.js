@@ -16,13 +16,13 @@ if (process.env.VERCEL) {
         console.log("⏳ [WhatsApp] Initializing WhatsApp Web Client...");
 
         // Determine chromium executable path dynamically (especially for VPS vs Local Windows/macOS)
-        let executablePath = undefined;
-        if (process.platform === "linux") {
+        let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
+        if (!executablePath && process.platform === "linux") {
             const possiblePaths = [
-                "/usr/bin/chromium-browser",
-                "/usr/bin/chromium",
+                "/usr/bin/google-chrome-stable",
                 "/usr/bin/google-chrome",
-                "/usr/bin/google-chrome-stable"
+                "/usr/bin/chromium-browser",
+                "/usr/bin/chromium"
             ];
             for (const path of possiblePaths) {
                 if (fs.existsSync(path)) {
@@ -31,13 +31,16 @@ if (process.env.VERCEL) {
                 }
             }
             if (!executablePath) {
-                console.log("⚠️ [WhatsApp] Linux detected but no standard Chromium/Chrome binary found in /usr/bin. Falling back to default puppeteer chrome.");
+                console.log("ℹ️ [WhatsApp] No system Chrome binary found in standard paths. Using default Puppeteer Chrome.");
+            } else {
+                console.log(`ℹ️ [WhatsApp] Using Chrome binary at: ${executablePath}`);
             }
         }
 
         const puppeteerConfig = {
             headless: true,
-            protocolTimeout: 120000,
+            timeout: 90000,
+            protocolTimeout: 180000,
             args: [
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
@@ -49,11 +52,7 @@ if (process.env.VERCEL) {
                 "--disable-extensions",
                 "--disable-default-apps",
                 "--mute-audio",
-                "--disable-site-isolation-trials",
-                "--disable-background-timer-throttling",
-                "--disable-backgrounding-occluded-windows",
-                "--disable-renderer-backgrounding",
-                "--disable-ipc-flooding-protection"
+                "--disable-site-isolation-trials"
             ]
         };
 
