@@ -47,10 +47,8 @@ export const generateResultPDF = async (req, res) => {
 
         return res.send(buffer);
     } catch (err) {
-        console.error("PDF generation failed:", err);
         return res.status(500).json({
             error: "PDF generation failed",
-            details: err.message
         });
     }
 };
@@ -140,7 +138,7 @@ export const sendResultWhatsAppController = async (req, res) => {
         const buffer = await renderToBuffer(element);
 
         const filename = `${student.name.replace(/\s+/g, "_")}_${result.examName.replace(/\s+/g, "_")}_Result.pdf`;
-        
+
         // Format subjects text
         const subjectsText = result.subjects
             .map((s) => `• *${s.name}*: ${s.marksObtained}/${s.totalMarks}`)
@@ -189,9 +187,9 @@ export const getWhatsAppStatusController = (req, res) => {
                 platform: whatsappClient.info.platform
             } : null;
 
-            return res.status(200).json({ 
+            return res.status(200).json({
                 success: true,
-                status: "authenticated", 
+                status: "authenticated",
                 message: "WhatsApp is ready and connected!",
                 deviceInfo
             });
@@ -199,18 +197,18 @@ export const getWhatsAppStatusController = (req, res) => {
 
         if (qr) {
             const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`;
-            return res.status(200).json({ 
+            return res.status(200).json({
                 success: true,
-                status: "scan_required", 
+                status: "scan_required",
                 qrCodeUrl,
-                message: "Scan this QR code with WhatsApp Linked Devices" 
+                message: "Scan this QR code with WhatsApp Linked Devices"
             });
         }
 
-        return res.status(200).json({ 
+        return res.status(200).json({
             success: true,
-            status: "initializing", 
-            message: "WhatsApp client is initializing. Please refresh in a few seconds." 
+            status: "initializing",
+            message: "WhatsApp client is initializing. Please refresh in a few seconds."
         });
     } catch (error) {
         console.error("getWhatsAppStatusController Error:", error);
@@ -268,7 +266,7 @@ export const generateMonthlyResultPDF = async (req, res) => {
         });
 
         const percentage = totalMaximum > 0 ? Number(((totalObtained / totalMaximum) * 100).toFixed(2)) : 0;
-        
+
         const calculateGrade = (pct) => {
             if (pct >= 90) return "A+";
             if (pct >= 80) return "A";

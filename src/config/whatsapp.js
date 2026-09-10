@@ -16,13 +16,13 @@ if (process.env.VERCEL) {
         console.log("⏳ [WhatsApp] Initializing WhatsApp Web Client...");
 
         // Determine chromium executable path dynamically (especially for VPS vs Local Windows/macOS)
-        let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
-        if (!executablePath && process.platform === "linux") {
+        let executablePath = undefined;
+        if (process.platform === "linux") {
             const possiblePaths = [
-                "/usr/bin/google-chrome-stable",
-                "/usr/bin/google-chrome",
                 "/usr/bin/chromium-browser",
-                "/usr/bin/chromium"
+                "/usr/bin/chromium",
+                "/usr/bin/google-chrome",
+                "/usr/bin/google-chrome-stable"
             ];
             for (const path of possiblePaths) {
                 if (fs.existsSync(path)) {
@@ -31,19 +31,13 @@ if (process.env.VERCEL) {
                 }
             }
             if (!executablePath) {
-                console.log("ℹ️ [WhatsApp] No system Chrome binary found in standard paths. Using default Puppeteer Chrome.");
-            } else {
-                console.log(`ℹ️ [WhatsApp] Using Chrome binary at: ${executablePath}`);
+                console.log("⚠️ [WhatsApp] Linux detected but no standard Chromium/Chrome binary found in /usr/bin. Falling back to default puppeteer chrome.");
             }
         }
 
-        const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
-
         const puppeteerConfig = {
             headless: true,
-            bypassCSP: true,
-            timeout: 90000,
-            protocolTimeout: 180000,
+            protocolTimeout: 300000,
             args: [
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
@@ -52,12 +46,14 @@ if (process.env.VERCEL) {
                 "--no-first-run",
                 "--no-zygote",
                 "--disable-gpu",
+                "--disable-background-timer-throttling",
+                "--disable-backgrounding-occluded-windows",
+                "--disable-renderer-backgrounding",
+                "--disable-ipc-flooding-protection",
                 "--disable-extensions",
                 "--disable-default-apps",
                 "--mute-audio",
-                "--disable-site-isolation-trials",
-                "--disable-web-security",
-                `--user-agent=${userAgent}`
+                "--js-flags=--max-old-space-size=2048"
             ]
         };
 
@@ -69,15 +65,12 @@ if (process.env.VERCEL) {
             authStrategy: new LocalAuth({
                 clientId: "nymph-classes-session"
             }),
-            userAgent,
+            userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
             puppeteer: puppeteerConfig,
             webVersionCache: {
-                type: "none"
+                type: "remote",
+                remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1047180487-alpha.html"
             }
-        });
-
-        client.on("loading_screen", (percent, message) => {
-            console.log(`⏳ [WhatsApp] Loading screen: ${percent}% — ${message}`);
         });
 
         client.on("qr", (qr) => {
@@ -89,23 +82,13 @@ if (process.env.VERCEL) {
             console.log("\n==================================================================================\n");
         });
 
-        client.on("authenticated", () => {
-            console.log("🔐 [WhatsApp] Authenticated successfully!");
-        });
-
         client.on("ready", () => {
             isReady = true;
             latestQR = null;
             console.log("🚀 [WhatsApp] Client is ready and authenticated!");
         });
 
-        client.on("change_state", (state) => {
-            console.log(`🔄 [WhatsApp] State changed to: ${state}`);
-        });
-
         client.on("auth_failure", (msg) => {
-            isReady = false;
-            latestQR = null;
             console.error("❌ [WhatsApp] Authentication failure:", msg);
         });
 
@@ -115,19 +98,9 @@ if (process.env.VERCEL) {
             console.log("⚠️ [WhatsApp] Client disconnected:", reason);
         });
 
-        const initWhatsApp = async (retryCount = 0) => {
-            try {
-                await client.initialize();
-            } catch (err) {
-                console.error("❌ [WhatsApp] Initialization error:", err.message);
-                if (err.message.includes("Execution context was destroyed") && retryCount < 2) {
-                    console.log(`🔄 [WhatsApp] Page navigated during startup. Retrying client initialization (attempt ${retryCount + 1})...`);
-                    setTimeout(() => initWhatsApp(retryCount + 1), 3000);
-                }
-            }
-        };
-
-        initWhatsApp();
+        client.initialize().catch(err => {
+            console.error("❌ [WhatsApp] Initialization error:", err.message);
+        });
 
     } catch (err) {
         console.error("❌ [WhatsApp] Failed to load whatsapp-web.js:", err.message);
@@ -137,6 +110,31 @@ if (process.env.VERCEL) {
 
 export const getWhatsAppStatus = () => isReady;
 export const getWhatsAppQR = () => latestQR;
+
+/**
+ * Ensures the WhatsApp client is ready and window.WWebJS is injected on the active page
+ */
+export const ensureWhatsAppReady = async () => {
+    if (!client || !isReady) {
+        throw new Error("WhatsApp client is not authenticated or ready. Please scan the QR code first.");
+    }
+
+    if (client.pupPage) {
+        try {
+            const hasWWebJS = await client.pupPage.evaluate(() => typeof window.WWebJS !== "undefined");
+            if (!hasWWebJS) {
+                console.log("🔄 [WhatsApp] window.WWebJS missing from page. Re-injecting utilities...");
+                const { LoadUtils } = await import("whatsapp-web.js/src/util/Injected/Utils.js");
+                await client.pupPage.evaluate(LoadUtils);
+                console.log("✅ [WhatsApp] window.WWebJS successfully re-injected!");
+            }
+        } catch (err) {
+            console.warn("⚠️ [WhatsApp] Could not verify/re-inject window.WWebJS:", err.message);
+        }
+    }
+
+    return true;
+};
 export const logoutWhatsApp = async () => {
     if (client) {
         try {
