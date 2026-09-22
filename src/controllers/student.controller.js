@@ -214,47 +214,126 @@ export const getStudentsByStandard = asyncHandler(async (req, res) => {
 export const bulkUpdateStudents = asyncHandler(async (req, res) => {
     const { students } = req.body;
 
-    if (!students || !Array.isArray(students)) {
+    if (!students || !Array.isArray(students) || students.length === 0) {
         res.status(400);
         throw new Error("students array is required");
     }
 
-    const results = [];
+    const studentIds = students.map(s => s._id).filter(Boolean);
+    if (studentIds.length === 0) {
+        res.status(400);
+        throw new Error("No valid student IDs provided");
+    }
+
+    // Fetch existing student records
+    const existingStudents = await Student.find({ _id: { $in: studentIds } });
+    const existingMap = new Map(existingStudents.map(s => [s._id.toString(), s]));
+
+    // 1. Prepare updates and check for duplicates within the submitted batch
+    const plannedUpdates = [];
+    const seenInBatch = new Map();
 
     for (const item of students) {
-        const { _id, ...fields } = item;
-        if (!_id) continue;
+        const idStr = item._id?.toString();
+        const current = existingMap.get(idStr);
+        if (!current) continue;
 
-        if (fields.rollNumber || fields.standard || fields.section) {
-            const currentStudent = await Student.findById(_id);
-            if (currentStudent) {
-                const rollToCheck = fields.rollNumber !== undefined ? fields.rollNumber : currentStudent.rollNumber;
-                const stdToCheck = fields.standard !== undefined ? fields.standard : currentStudent.standard;
-                const secToCheck = fields.section !== undefined ? fields.section : currentStudent.section;
+        const roll = item.rollNumber !== undefined ? String(item.rollNumber).trim() : String(current.rollNumber).trim();
+        const std = item.standard !== undefined ? String(item.standard).trim() : String(current.standard).trim();
+        const sec = item.section !== undefined ? String(item.section).trim() : (current.section ? String(current.section).trim() : "");
+        const studentName = (item.name || current.name || "").trim();
 
-                const query = {
-                    rollNumber: rollToCheck,
-                    standard: stdToCheck,
-                    _id: { $ne: _id }
-                };
-                if (secToCheck) {
-                    query.section = secToCheck;
-                }
+        // Check for duplicate roll numbers WITHIN this submitted batch
+        const classKey = `${std}__${sec}__${roll}`;
+        if (seenInBatch.has(classKey)) {
+            const conflictingName = seenInBatch.get(classKey);
+            res.status(400);
+            throw new Error(`Duplicate roll number "${roll}" assigned to multiple students in Class ${std}${sec ? ` (${sec})` : ""} ("${conflictingName}" and "${studentName}"). Each student must have a unique roll number.`);
+        }
+        seenInBatch.set(classKey, studentName);
 
-                const duplicate = await Student.findOne(query);
-                if (duplicate) {
-                    const beingUpdated = students.find(s => s._id === duplicate._id.toString());
-                    if (!beingUpdated || beingUpdated.rollNumber === rollToCheck) {
-                        res.status(400);
-                        throw new Error(`Roll number ${rollToCheck} already exists in Class ${stdToCheck}${secToCheck ? ` (${secToCheck})` : ""} for student "${duplicate.name}".`);
+        const { _id, ...otherFields } = item;
+        plannedUpdates.push({
+            _id: current._id,
+            targetFields: {
+                ...otherFields,
+                rollNumber: roll,
+                standard: std,
+                ...(sec ? { section: sec } : {})
+            },
+            current,
+            roll,
+            std,
+            sec,
+            name: studentName
+        });
+    }
+
+    // 2. Validate against existing students OUTSIDE this batch
+    for (const update of plannedUpdates) {
+        const query = {
+            rollNumber: update.roll,
+            standard: update.std,
+            _id: { $nin: studentIds }
+        };
+        if (update.sec) {
+            query.section = update.sec;
+        } else {
+            query.$or = [{ section: { $exists: false } }, { section: null }, { section: "" }];
+        }
+
+        const collision = await Student.findOne(query);
+        if (collision) {
+            res.status(400);
+            throw new Error(`Roll number ${update.roll} already exists in Class ${update.std}${update.sec ? ` (${update.sec})` : ""} for student "${collision.name}".`);
+        }
+    }
+
+    // 3. Two-phase update to prevent MongoDB unique index collisions:
+    // If students in this batch swap or shift roll numbers (e.g. roll 5 -> 6 and roll 6 -> 7),
+    // directly updating one-by-one causes MongoDB E11000 duplicate key error.
+    // Phase 1 sets a unique temporary placeholder rollNumber for all students in the batch.
+    const tempOps = plannedUpdates.map((update, idx) => ({
+        updateOne: {
+            filter: { _id: update._id },
+            update: { $set: { rollNumber: `__tmp_${Date.now()}_${idx}_${update._id}` } }
+        }
+    }));
+    await Student.bulkWrite(tempOps);
+
+    // Phase 2: Apply final target fields to each student
+    const finalOps = plannedUpdates.map(update => ({
+        updateOne: {
+            filter: { _id: update._id },
+            update: { $set: update.targetFields }
+        }
+    }));
+
+    try {
+        await Student.bulkWrite(finalOps);
+    } catch (writeErr) {
+        // Rollback to original values if Phase 2 fails
+        const rollbackOps = existingStudents.map(s => ({
+            updateOne: {
+                filter: { _id: s._id },
+                update: {
+                    $set: {
+                        name: s.name,
+                        rollNumber: s.rollNumber,
+                        standard: s.standard,
+                        section: s.section,
+                        phone: s.phone,
+                        secondPhone: s.secondPhone,
+                        fatherName: s.fatherName,
+                        motherName: s.motherName
                     }
                 }
             }
-        }
-
-        const updated = await Student.findByIdAndUpdate(_id, fields, { new: true });
-        results.push(updated);
+        }));
+        await Student.bulkWrite(rollbackOps).catch(() => {});
+        throw writeErr;
     }
 
-    res.json({ message: `Successfully updated ${results.length} students`, students: results });
+    const updatedStudents = await Student.find({ _id: { $in: studentIds } });
+    res.json({ message: `Successfully updated ${updatedStudents.length} students`, students: updatedStudents });
 });
