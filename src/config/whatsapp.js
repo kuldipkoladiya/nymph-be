@@ -68,8 +68,7 @@ if (process.env.VERCEL) {
             userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
             puppeteer: puppeteerConfig,
             webVersionCache: {
-                type: "remote",
-                remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1047180487-alpha.html"
+                type: "none"
             }
         });
 
@@ -82,10 +81,21 @@ if (process.env.VERCEL) {
             console.log("\n==================================================================================\n");
         });
 
-        client.on("ready", () => {
+        client.on("ready", async () => {
             isReady = true;
             latestQR = null;
             console.log("🚀 [WhatsApp] Client is ready and authenticated!");
+            if (client.pupPage) {
+                try {
+                    await client.pupPage.evaluate(() => {
+                        if (typeof window.require !== "function" && typeof require === "function") {
+                            window.require = require;
+                        }
+                    });
+                } catch {
+                    // ignore page evaluate error on startup
+                }
+            }
         });
 
         client.on("auth_failure", (msg) => {
@@ -121,6 +131,12 @@ export const ensureWhatsAppReady = async () => {
 
     if (client.pupPage) {
         try {
+            await client.pupPage.evaluate(() => {
+                if (typeof window.require !== "function" && typeof require === "function") {
+                    window.require = require;
+                }
+            });
+
             const hasWWebJS = await client.pupPage.evaluate(() => typeof window.WWebJS !== "undefined");
             if (!hasWWebJS) {
                 console.log("🔄 [WhatsApp] window.WWebJS missing from page. Re-injecting utilities...");
