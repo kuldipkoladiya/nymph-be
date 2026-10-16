@@ -305,7 +305,7 @@ export function ResultPDF({ student, result }) {
                         { style: i % 2 === 0 ? styles.tableRowEven : styles.tableRow, key: i },
                         React.createElement(Text, { style: styles.cellSubject }, sub.name),
                         React.createElement(Text, { style: styles.cellTotalMarks }, sub.totalMarks),
-                        React.createElement(Text, { style: styles.cellObtainedMarks }, sub.marksObtained)
+                        React.createElement(Text, { style: { ...styles.cellObtainedMarks, ...(sub.marksObtained === "AB" ? { color: "#dc2626" } : {}) } }, sub.marksObtained === "AB" ? "AB (Absent)" : sub.marksObtained)
                     )
                 )
             ),

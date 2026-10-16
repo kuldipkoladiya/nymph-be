@@ -22,13 +22,15 @@ export const createResult = asyncHandler(async (req, res) => {
     let totalMaximum = 0;
 
     subjects.forEach((s) => {
-        totalObtained += Number(s.marksObtained);
+        const marks = (s.marksObtained === "AB" || isNaN(Number(s.marksObtained))) ? 0 : Number(s.marksObtained);
+        totalObtained += marks;
         totalMaximum += Number(s.totalMarks);
     });
 
     let percentage = Number(((totalObtained / totalMaximum) * 100).toFixed(2));
     if (percentage > 100) percentage = 100;
-    const grade = calculateGrade(percentage);
+    const allAbsent = subjects.length > 0 && subjects.every((s) => s.marksObtained === "AB");
+    const grade = allAbsent ? "AB" : calculateGrade(percentage);
 
     const result = await Result.create({
         studentId,
@@ -67,7 +69,7 @@ export const createResult = asyncHandler(async (req, res) => {
                 const filename = `${student.name.replace(/\s+/g, "_")}_${result.examName.replace(/\s+/g, "_")}_Result.pdf`;
 
                 const subjectsText = result.subjects
-                    .map((s) => `• *${s.name}*: ${s.marksObtained}/${s.totalMarks}`)
+                    .map((s) => `• *${s.name}*: ${s.marksObtained === "AB" ? "AB (Absent)" : `${s.marksObtained}/${s.totalMarks}`}`)
                     .join("\n");
 
                 const messageBody = `Hello *${student.name}*,\n\nYour result for *${result.examName}* (Standard ${student.standard}) has been published:\n\n*Scores:*\n${subjectsText}\n\n*Total:* ${result.totalObtained} / ${result.totalMaximum}\n*Percentage:* ${result.percentage}%\n*Grade:* ${result.grade}\n\nPlease find your detailed scorecard PDF attached below.\n\nBest regards,\nNymph Classes`;
@@ -92,7 +94,8 @@ export const updateResult = asyncHandler(async (req, res) => {
         let totalMaximum = 0;
 
         subjects.forEach((s) => {
-            totalObtained += Number(s.marksObtained);
+            const marks = (s.marksObtained === "AB" || isNaN(Number(s.marksObtained))) ? 0 : Number(s.marksObtained);
+            totalObtained += marks;
             totalMaximum += Number(s.totalMarks);
         });
 
@@ -358,13 +361,15 @@ export const batchCreateResults = asyncHandler(async (req, res) => {
         let totalMaximum = 0;
 
         subjects.forEach((s) => {
-            totalObtained += Number(s.marksObtained || 0);
+            const val = (s.marksObtained === "AB" || isNaN(Number(s.marksObtained))) ? 0 : Number(s.marksObtained);
+            totalObtained += val;
             totalMaximum += Number(s.totalMarks || 0);
         });
 
         let percentage = totalMaximum > 0 ? Number(((totalObtained / totalMaximum) * 100).toFixed(2)) : 0;
         if (percentage > 100) percentage = 100;
-        const grade = calculateGrade(percentage);
+        const allAbsent = subjects.length > 0 && subjects.every((s) => s.marksObtained === "AB");
+        const grade = allAbsent ? "AB" : calculateGrade(percentage);
 
         const result = await Result.create({
             studentId,
@@ -400,7 +405,7 @@ export const batchCreateResults = asyncHandler(async (req, res) => {
                     const filename = `${student.name.replace(/\s+/g, "_")}_${result.examName.replace(/\s+/g, "_")}_Result.pdf`;
 
                     const subjectsText = result.subjects
-                        .map((s) => `• *${s.name}*: ${s.marksObtained}/${s.totalMarks}`)
+                        .map((s) => `• *${s.name}*: ${s.marksObtained === "AB" ? "AB (Absent)" : `${s.marksObtained}/${s.totalMarks}`}`)
                         .join("\n");
 
                     const messageBody = `Hello *${student.name}*,\n\nYour result for *${result.examName}* (Standard ${student.standard}) has been published:\n\n*Scores:*\n${subjectsText}\n\n*Total:* ${result.totalObtained} / ${result.totalMaximum}\n*Percentage:* ${result.percentage}%\n*Grade:* ${result.grade}\n\nPlease find your detailed scorecard PDF attached below.\n\nBest regards,\nNymph Classes`;

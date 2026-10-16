@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const subjectSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    marksObtained: { type: Number, required: true },
+    marksObtained: { type: mongoose.Schema.Types.Mixed, required: true }, // Supports Number or "AB" (Absent)
     totalMarks: { type: Number, required: true }
 });
 

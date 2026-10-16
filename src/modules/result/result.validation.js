@@ -7,7 +7,7 @@ export const createResultSchema = Joi.object({
     subjects: Joi.array().items(
         Joi.object({
             name: Joi.string().required(),
-            marksObtained: Joi.number().allow("", null).required(),
+            marksObtained: Joi.alternatives().try(Joi.number(), Joi.string()).allow("", null).required(),
             totalMarks: Joi.number().required(),
         })
     ).required(),
