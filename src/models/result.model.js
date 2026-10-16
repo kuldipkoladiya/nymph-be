@@ -16,7 +16,7 @@ const resultSchema = new mongoose.Schema(
         examName: { type: String, required: true }, // e.g Final Exam
         standard: { type: String, required: true },
         subjects: [subjectSchema],
-        examDate: { type: Date, required: true },
+        examDate: { type: Date, required: false, default: Date.now },
         totalObtained: { type: Number },
         totalMaximum: { type: Number },
         percentage: { type: Number },

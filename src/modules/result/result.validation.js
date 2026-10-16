@@ -11,6 +11,6 @@ export const createResultSchema = Joi.object({
             totalMarks: Joi.number().required(),
         })
     ).required(),
-    examDate: Joi.date().required(),
+    examDate: Joi.date().optional().allow(null, ""),
     sendWhatsApp: Joi.boolean().optional(),
 });

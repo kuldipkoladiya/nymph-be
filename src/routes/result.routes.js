@@ -7,6 +7,8 @@ import {
     getMonthlyReport,
     sendMonthlyWhatsApp,
     sendMonthlyWhatsAppBulk,
+    batchCreateResults,
+    getResultsByClass,
 } from "../controllers/result.controller.js";
 import {generateResultPDF, generateMonthlyResultPDF, getResultById, sendResultWhatsAppController, getWhatsAppStatusController, logoutWhatsAppController} from "../controllers/pdf.controller.js";
 import validate from "../middlewares/validate.js";
@@ -22,6 +24,8 @@ router.post("/monthly/send-whatsapp", sendMonthlyWhatsApp);
 router.post("/monthly/send-whatsapp-bulk", sendMonthlyWhatsAppBulk);
 router.get("/monthly/pdf/:studentId/:month/:year", generateMonthlyResultPDF);
 
+router.get("/by-class", getResultsByClass);
+router.post("/batch", batchCreateResults);
 router.post("/", validate(createResultSchema), createResult);
 router.put("/:id", updateResult);
 router.get("/student/:id", getStudentResults);

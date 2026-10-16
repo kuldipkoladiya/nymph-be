@@ -245,7 +245,7 @@ export function ResultPDF({ student, result }) {
                     View,
                     { style: styles.headerTextContainer },
                     React.createElement(Text, { style: styles.title }, "Nymph Classes"),
-                    React.createElement(Text, { style: styles.subTitle }, "Student Result Card")
+                    React.createElement(Text, { style: styles.subTitle }, (result.examName ? `${result.examName} Result Card` : "Student Result Card"))
                 )
             ),
 
@@ -274,15 +274,13 @@ export function ResultPDF({ student, result }) {
                 React.createElement(
                     View,
                     { style: styles.studentInfoCol },
-                    React.createElement(Text, { style: styles.infoLabel }, "Exam Date"),
+                    React.createElement(Text, { style: styles.infoLabel }, (result.examDate && !isNaN(new Date(result.examDate).getTime()) ? "Exam Assessment" : "Exam Type")),
                     React.createElement(
                         Text,
                         { style: styles.infoValue },
-                        new Date(result.examDate).toLocaleDateString("en-IN", {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric"
-                        })
+                        result.examDate && !isNaN(new Date(result.examDate).getTime())
+                            ? (result.examName ? `${result.examName} (${new Date(result.examDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })})` : new Date(result.examDate).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }))
+                            : (result.examName || "Round Test")
                     )
                 )
             ),

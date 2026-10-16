@@ -35,7 +35,7 @@ export const createResult = asyncHandler(async (req, res) => {
         examName,
         standard,
         subjects,
-        examDate,
+        examDate: (examDate && examDate !== "") ? new Date(examDate) : new Date(),
         totalObtained,
         totalMaximum,
         percentage,
@@ -321,4 +321,96 @@ export const sendMonthlyWhatsAppBulk = asyncHandler(async (req, res) => {
     }
 
     res.json({ success: true, message: "Bulk WhatsApp messages completed!", report: reportResults });
+});
+
+
+export const getResultsByClass = asyncHandler(async (req, res) => {
+    const { standard, examName, section } = req.query;
+    let query = {};
+    if (standard) query.standard = standard;
+    if (examName) query.examName = { $regex: new RegExp(examName, "i") };
+
+    let results = await Result.find(query).populate("studentId").sort({ createdAt: -1 });
+
+    if (section) {
+        results = results.filter(r => r.studentId && r.studentId.section === section);
+    }
+
+    res.json(results);
+});
+
+export const batchCreateResults = asyncHandler(async (req, res) => {
+    const { results, sendWhatsApp } = req.body;
+
+    if (!Array.isArray(results) || results.length === 0) {
+        res.status(400);
+        throw new Error("No student results provided");
+    }
+
+    const createdResults = [];
+
+    for (const item of results) {
+        const { studentId, examName, standard, subjects, examDate } = item;
+        const student = await Student.findById(studentId);
+        if (!student) continue;
+
+        let totalObtained = 0;
+        let totalMaximum = 0;
+
+        subjects.forEach((s) => {
+            totalObtained += Number(s.marksObtained || 0);
+            totalMaximum += Number(s.totalMarks || 0);
+        });
+
+        let percentage = totalMaximum > 0 ? Number(((totalObtained / totalMaximum) * 100).toFixed(2)) : 0;
+        if (percentage > 100) percentage = 100;
+        const grade = calculateGrade(percentage);
+
+        const result = await Result.create({
+            studentId,
+            examName,
+            standard,
+            subjects,
+            examDate: (examDate && examDate !== "") ? new Date(examDate) : new Date(),
+            totalObtained,
+            totalMaximum,
+            percentage,
+            grade
+        });
+
+        createdResults.push({ result, student });
+    }
+
+    res.status(201).json({ 
+        message: `Saved ${createdResults.length} results successfully`, 
+        count: createdResults.length 
+    });
+
+    if (sendWhatsApp) {
+        (async () => {
+            for (const { result, student } of createdResults) {
+                try {
+                    if (!getWhatsAppStatus() || !student.phone) continue;
+
+                    const element = React.createElement(ResultPDF, {
+                        student,
+                        result,
+                    });
+                    const buffer = await renderToBuffer(element);
+                    const filename = `${student.name.replace(/\s+/g, "_")}_${result.examName.replace(/\s+/g, "_")}_Result.pdf`;
+
+                    const subjectsText = result.subjects
+                        .map((s) => `• *${s.name}*: ${s.marksObtained}/${s.totalMarks}`)
+                        .join("\n");
+
+                    const messageBody = `Hello *${student.name}*,\n\nYour result for *${result.examName}* (Standard ${student.standard}) has been published:\n\n*Scores:*\n${subjectsText}\n\n*Total:* ${result.totalObtained} / ${result.totalMaximum}\n*Percentage:* ${result.percentage}%\n*Grade:* ${result.grade}\n\nPlease find your detailed scorecard PDF attached below.\n\nBest regards,\nNymph Classes`;
+
+                    await sendResultWhatsApp(student.phone, buffer, filename, messageBody);
+                    await new Promise(r => setTimeout(r, 1200));
+                } catch (err) {
+                    console.error(`❌ [WhatsApp] Background send error for ${student.name}:`, err);
+                }
+            }
+        })();
+    }
 });
