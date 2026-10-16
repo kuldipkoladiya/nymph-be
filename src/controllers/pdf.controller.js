@@ -6,7 +6,7 @@ import Result from "../models/result.model.js";
 import mongoose from "mongoose";
 import React from "react";
 import { sendResultWhatsApp, getWhatsAppStatus, getWhatsAppQR } from "../utils/whatsappSender.js";
-import whatsappClient, { logoutWhatsApp, restartWhatsApp } from "../config/whatsapp.js";
+import whatsappClient, { logoutWhatsApp, restartWhatsApp, getWhatsAppClient } from "../config/whatsapp.js";
 
 export const generateResultPDF = async (req, res) => {
     try {
