@@ -39,20 +39,43 @@ export const initClient = async (cleanSession = false) => {
 
         let executablePath = undefined;
         if (process.platform === "linux") {
-            const possiblePaths = [
-                "/usr/bin/chromium-browser",
-                "/usr/bin/chromium",
+            // Prioritize native Google Chrome (.deb), strictly avoid Ubuntu Snap packages!
+            const nativePaths = [
+                "/usr/bin/google-chrome-stable",
                 "/usr/bin/google-chrome",
-                "/usr/bin/google-chrome-stable"
+                "/opt/google/chrome/chrome"
             ];
-            for (const p of possiblePaths) {
+            for (const p of nativePaths) {
                 if (fsModule.existsSync(p)) {
                     executablePath = p;
+                    console.log("✅ [WhatsApp] Found native Google Chrome at:", p);
                     break;
                 }
             }
+
+            // Only consider Chromium if it is NOT a snap package
             if (!executablePath) {
-                console.log("⚠️ [WhatsApp] Linux detected but no standard Chromium binary found. Falling back to default puppeteer chrome.");
+                const chromiumPaths = ["/usr/bin/chromium", "/usr/bin/chromium-browser"];
+                for (const p of chromiumPaths) {
+                    if (fsModule.existsSync(p)) {
+                        try {
+                            const real = fsModule.realpathSync(p);
+                            if (!real.includes("/snap/")) {
+                                executablePath = p;
+                                console.log("✅ [WhatsApp] Found native Chromium at:", p);
+                                break;
+                            } else {
+                                console.log(`⚠️ [WhatsApp] Skipping ${p} because it is a Snap package (${real}). Snap cannot run in PM2/headless without sandbox errors.`);
+                            }
+                        } catch {
+                            // ignore realpath error
+                        }
+                    }
+                }
+            }
+
+            if (!executablePath) {
+                console.log("ℹ️ [WhatsApp] No native Chrome/Chromium found. Falling back to Puppeteer bundled browser.");
             }
         }
 
