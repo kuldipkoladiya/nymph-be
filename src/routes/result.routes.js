@@ -10,7 +10,7 @@ import {
     batchCreateResults,
     getResultsByClass,
 } from "../controllers/result.controller.js";
-import {generateResultPDF, generateMonthlyResultPDF, getResultById, sendResultWhatsAppController, getWhatsAppStatusController, logoutWhatsAppController} from "../controllers/pdf.controller.js";
+import {generateResultPDF, generateMonthlyResultPDF, getResultById, sendResultWhatsAppController, getWhatsAppStatusController, logoutWhatsAppController, restartWhatsAppController} from "../controllers/pdf.controller.js";
 import validate from "../middlewares/validate.js";
 import {createResultSchema} from "../modules/result/result.validation.js";
 import { authorize } from "../middlewares/authorize.js";
@@ -35,4 +35,5 @@ router.post("/send-whatsapp/:studentId/:examId", sendResultWhatsAppController);
 router.get("/id/:resultId",  getResultById);
 router.get("/whatsapp-status", getWhatsAppStatusController);
 router.post("/whatsapp-logout", logoutWhatsAppController);
+router.post("/whatsapp-restart", restartWhatsAppController);
 export default router;

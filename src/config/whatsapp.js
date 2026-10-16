@@ -1,21 +1,42 @@
 let client = null;
 let isReady = false;
 let latestQR = null;
+let isInitializing = false;
 
 // WhatsApp requires a persistent filesystem and Chromium (not available on Vercel/serverless).
-// We skip initialization entirely on Vercel and only run on a real server/VPS.
-if (process.env.VERCEL) {
-    console.log("⚠️ [WhatsApp] Skipping WhatsApp init — running on Vercel (serverless).");
-} else {
+export const initClient = async (cleanSession = false) => {
+    if (process.env.VERCEL) {
+        console.log("⚠️ [WhatsApp] Skipping WhatsApp init — running on Vercel (serverless).");
+        return;
+    }
+
+    if (isInitializing) {
+        console.log("⏳ [WhatsApp] Initialization already in progress...");
+        return;
+    }
+    isInitializing = true;
+
     try {
         const { default: pkg } = await import("whatsapp-web.js");
         const { Client, LocalAuth } = pkg;
         const { default: qrcode } = await import("qrcode-terminal");
-        const { default: fs } = await import("fs");
+        const { default: fsModule } = await import("fs");
+        const { default: pathModule } = await import("path");
 
-        console.log("⏳ [WhatsApp] Initializing WhatsApp Web Client...");
+        if (cleanSession) {
+            const sessionPath = pathModule.resolve("./.wwebjs_auth/session-nymph-classes-session");
+            if (fsModule.existsSync(sessionPath)) {
+                try {
+                    fsModule.rmSync(sessionPath, { recursive: true, force: true });
+                    console.log("🧹 [WhatsApp] Removed stale session directory.");
+                } catch (rmErr) {
+                    console.warn("Could not remove session directory:", rmErr.message);
+                }
+            }
+        }
 
-        // Determine chromium executable path dynamically (especially for VPS vs Local Windows/macOS)
+        console.log("⏳ [WhatsApp] Initializing WhatsApp Web Client with remote webVersionCache...");
+
         let executablePath = undefined;
         if (process.platform === "linux") {
             const possiblePaths = [
@@ -24,14 +45,14 @@ if (process.env.VERCEL) {
                 "/usr/bin/google-chrome",
                 "/usr/bin/google-chrome-stable"
             ];
-            for (const path of possiblePaths) {
-                if (fs.existsSync(path)) {
-                    executablePath = path;
+            for (const p of possiblePaths) {
+                if (fsModule.existsSync(p)) {
+                    executablePath = p;
                     break;
                 }
             }
             if (!executablePath) {
-                console.log("⚠️ [WhatsApp] Linux detected but no standard Chromium/Chrome binary found in /usr/bin. Falling back to default puppeteer chrome.");
+                console.log("⚠️ [WhatsApp] Linux detected but no standard Chromium binary found. Falling back to default puppeteer chrome.");
             }
         }
 
@@ -68,12 +89,15 @@ if (process.env.VERCEL) {
             userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
             puppeteer: puppeteerConfig,
             webVersionCache: {
-                type: "none"
+                type: "remote",
+                remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html",
+                strict: false
             }
         });
 
         client.on("qr", (qr) => {
             latestQR = qr;
+            isReady = false;
             console.log("\n==================================================================================");
             console.log("⚡ [WhatsApp] QR Code Generated! Scan this with your phone under Linked Devices:");
             console.log("==================================================================================\n");
@@ -81,9 +105,15 @@ if (process.env.VERCEL) {
             console.log("\n==================================================================================\n");
         });
 
+        client.on("authenticated", () => {
+            console.log("🔐 [WhatsApp] Client authenticated!");
+            latestQR = null;
+        });
+
         client.on("ready", async () => {
             isReady = true;
             latestQR = null;
+            isInitializing = false;
             console.log("🚀 [WhatsApp] Client is ready and authenticated!");
             if (client.pupPage) {
                 try {
@@ -100,30 +130,82 @@ if (process.env.VERCEL) {
 
         client.on("auth_failure", (msg) => {
             console.error("❌ [WhatsApp] Authentication failure:", msg);
+            isReady = false;
+            latestQR = null;
+            isInitializing = false;
         });
 
         client.on("disconnected", (reason) => {
             isReady = false;
             latestQR = null;
+            isInitializing = false;
             console.log("⚠️ [WhatsApp] Client disconnected:", reason);
         });
 
         client.initialize().catch(err => {
             console.error("❌ [WhatsApp] Initialization error:", err.message);
+            isInitializing = false;
+            latestQR = null;
         });
 
     } catch (err) {
-        console.error("❌ [WhatsApp] Failed to load whatsapp-web.js:", err.message);
+        console.error("❌ [WhatsApp] Failed to load/initialize whatsapp-web.js:", err.message);
         client = null;
+        isReady = false;
+        latestQR = null;
+    } finally {
+        isInitializing = false;
     }
-}
+};
+
+// Initial startup
+initClient();
 
 export const getWhatsAppStatus = () => isReady;
 export const getWhatsAppQR = () => latestQR;
+export const getWhatsAppClient = () => client;
+export const getWhatsAppInitStatus = () => ({
+    isReady,
+    isInitializing,
+    hasQR: !!latestQR
+});
 
-/**
- * Ensures the WhatsApp client is ready and window.WWebJS is injected on the active page
- */
+export const restartWhatsApp = async (cleanSession = false) => {
+    try {
+        console.log(`🔄 [WhatsApp] Restarting client (cleanSession: ${cleanSession})...`);
+        if (client) {
+            try {
+                await client.destroy();
+            } catch (e) {
+                console.warn("⚠️ [WhatsApp] Error destroying client:", e.message);
+            }
+            client = null;
+        }
+        isReady = false;
+        latestQR = null;
+        isInitializing = false;
+        await initClient(cleanSession);
+        return { success: true, message: "WhatsApp client restarted and generating QR." };
+    } catch (err) {
+        console.error("❌ [WhatsApp] Restart error:", err);
+        isInitializing = false;
+        return { success: false, error: err.message };
+    }
+};
+
+export const logoutWhatsApp = async () => {
+    if (client) {
+        try {
+            await client.logout();
+        } catch (error) {
+            console.warn("⚠️ [WhatsApp] Logout warning:", error.message);
+        }
+    }
+    // Clean stale session and restart so a fresh QR is generated immediately
+    await restartWhatsApp(true);
+    return { success: true, message: "Logged out successfully. Fresh QR code is generating..." };
+};
+
 export const ensureWhatsAppReady = async () => {
     if (!client || !isReady) {
         throw new Error("WhatsApp client is not authenticated or ready. Please scan the QR code first.");
@@ -151,20 +233,5 @@ export const ensureWhatsAppReady = async () => {
 
     return true;
 };
-export const logoutWhatsApp = async () => {
-    if (client) {
-        try {
-            await client.logout();
-            isReady = false;
-            latestQR = null;
-            return { success: true, message: "Logged out successfully." };
-        } catch (error) {
-            console.error("❌ [WhatsApp] Logout error:", error);
-            isReady = false;
-            latestQR = null;
-            return { success: false, error: error.message };
-        }
-    }
-    return { success: false, error: "WhatsApp client not initialized." };
-};
+
 export default client;

@@ -6,7 +6,7 @@ import Result from "../models/result.model.js";
 import mongoose from "mongoose";
 import React from "react";
 import { sendResultWhatsApp, getWhatsAppStatus, getWhatsAppQR } from "../utils/whatsappSender.js";
-import whatsappClient, { logoutWhatsApp } from "../config/whatsapp.js";
+import whatsappClient, { logoutWhatsApp, restartWhatsApp } from "../config/whatsapp.js";
 
 export const generateResultPDF = async (req, res) => {
     try {
@@ -181,10 +181,11 @@ export const getWhatsAppStatusController = (req, res) => {
         const qr = getWhatsAppQR();
 
         if (isReady) {
-            const deviceInfo = whatsappClient && whatsappClient.info ? {
-                pushname: whatsappClient.info.pushname,
-                number: whatsappClient.info.wid?.user || whatsappClient.info.me?.user,
-                platform: whatsappClient.info.platform
+            const client = getWhatsAppClient();
+            const deviceInfo = client && client.info ? {
+                pushname: client.info.pushname,
+                number: client.info.wid?.user || client.info.me?.user,
+                platform: client.info.platform
             } : null;
 
             return res.status(200).json({
@@ -215,6 +216,21 @@ export const getWhatsAppStatusController = (req, res) => {
         return res.status(500).json({
             success: false,
             error: "Failed to retrieve WhatsApp status."
+        });
+    }
+};
+
+
+export const restartWhatsAppController = async (req, res) => {
+    try {
+        const clean = req.body?.clean === true || req.query?.clean === "true";
+        const result = await restartWhatsApp(clean);
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error("restartWhatsAppController Error:", error);
+        return res.status(500).json({
+            success: false,
+            error: error.message || "Failed to restart WhatsApp client."
         });
     }
 };

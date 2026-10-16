@@ -1,6 +1,6 @@
 import pkg from "whatsapp-web.js";
 const { MessageMedia } = pkg;
-import whatsappClient, { getWhatsAppStatus, getWhatsAppQR, ensureWhatsAppReady } from "../config/whatsapp.js";
+import { getWhatsAppStatus, getWhatsAppQR, ensureWhatsAppReady, getWhatsAppClient } from "../config/whatsapp.js";
 
 export { getWhatsAppStatus, getWhatsAppQR, ensureWhatsAppReady };
 
@@ -42,11 +42,16 @@ export const sendResultWhatsApp = async (phone, pdfBuffer, filename, messageBody
             throw new Error("Invalid phone number provided.");
         }
 
+        const client = getWhatsAppClient();
+        if (!client) {
+            throw new Error("WhatsApp client instance is not available.");
+        }
+
         // Verify contact on WhatsApp to get the exact JID
         let targetChatId = `${cleaned}@c.us`;
         try {
-            if (typeof whatsappClient.getNumberId === "function") {
-                const numberDetails = await whatsappClient.getNumberId(cleaned);
+            if (typeof client.getNumberId === "function") {
+                const numberDetails = await client.getNumberId(cleaned);
                 if (numberDetails && numberDetails._serialized) {
                     targetChatId = numberDetails._serialized;
                 } else if (numberDetails === null) {
@@ -67,7 +72,7 @@ export const sendResultWhatsApp = async (phone, pdfBuffer, filename, messageBody
         const media = new MessageMedia("application/pdf", base64Data, filename);
 
         // Send message with media and caption (sendMediaAsDocument ensures fast PDF delivery)
-        const response = await whatsappClient.sendMessage(targetChatId, media, {
+        const response = await client.sendMessage(targetChatId, media, {
             caption: messageBody,
             sendMediaAsDocument: true
         });
@@ -105,10 +110,15 @@ export const sendTextWhatsApp = async (phone, messageBody) => {
             throw new Error("Invalid phone number provided.");
         }
 
+        const client = getWhatsAppClient();
+        if (!client) {
+            throw new Error("WhatsApp client instance is not available.");
+        }
+
         let targetChatId = `${cleaned}@c.us`;
         try {
-            if (typeof whatsappClient.getNumberId === "function") {
-                const numberDetails = await whatsappClient.getNumberId(cleaned);
+            if (typeof client.getNumberId === "function") {
+                const numberDetails = await client.getNumberId(cleaned);
                 if (numberDetails && numberDetails._serialized) {
                     targetChatId = numberDetails._serialized;
                 } else if (numberDetails === null) {
@@ -124,7 +134,7 @@ export const sendTextWhatsApp = async (phone, messageBody) => {
 
         console.log(`📤 Sending text message via whatsapp-web.js to ${targetChatId}...`);
 
-        const response = await whatsappClient.sendMessage(targetChatId, messageBody);
+        const response = await client.sendMessage(targetChatId, messageBody);
 
         if (response && response.id) {
             const messageId = response.id._serialized || response.id.$1 || (typeof response.id === "string" ? response.id : null);
