@@ -145,6 +145,7 @@ export const initClient = async (cleanSession = false) => {
                             window.require = require;
                         }
                     });
+                    await patchWhatsAppMediaSupport(client);
                 } catch {
                     // ignore page evaluate error on startup
                 }
@@ -229,6 +230,85 @@ export const logoutWhatsApp = async () => {
     return { success: true, message: "Logged out successfully. Fresh QR code is generating..." };
 };
 
+export const patchWhatsAppMediaSupport = async (targetClient = client) => {
+    if (!targetClient || !targetClient.pupPage) return;
+
+    try {
+        await targetClient.pupPage.evaluate(() => {
+            if (typeof window === "undefined") return;
+
+            // 1. Ensure require is globally accessible
+            if (typeof window.require !== "function" && typeof require === "function") {
+                window.require = require;
+            }
+
+            // 2. Patch WAWebSendMsgChatAction.addAndSendMsgToChat
+            // Fixes wwebjs PR #201923: Spreading mediaOptions introduces __x_id from the MediaData model,
+            // which collides with Msg's id and crashes getValidatedSender() in Msg.initialize.
+            try {
+                if (typeof window.require === "function") {
+                    const SendMsgAction = window.require("WAWebSendMsgChatAction");
+                    if (SendMsgAction && typeof SendMsgAction.addAndSendMsgToChat === "function" && !SendMsgAction.__xid_patched) {
+                        const origAddAndSendMsgToChat = SendMsgAction.addAndSendMsgToChat;
+                        SendMsgAction.addAndSendMsgToChat = function (chat, message, ...rest) {
+                            if (message && message.__x_id) {
+                                delete message.__x_id;
+                            }
+                            return origAddAndSendMsgToChat.call(this, chat, message, ...rest);
+                        };
+                        SendMsgAction.__xid_patched = true;
+                    }
+                }
+            } catch (_) {}
+
+            // 3. Patch window.WWebJS.processMediaData to strip __x_id directly
+            try {
+                if (window.WWebJS && typeof window.WWebJS.processMediaData === "function" && !window.WWebJS.processMediaData.__xid_patched) {
+                    const origProcessMediaData = window.WWebJS.processMediaData;
+                    window.WWebJS.processMediaData = async function (...args) {
+                        const mediaData = await origProcessMediaData.apply(this, args);
+                        if (mediaData) {
+                            try { delete mediaData.__x_id; } catch (_) {}
+                            if (typeof mediaData.toJSON === "function") {
+                                const origToJSON = mediaData.toJSON;
+                                mediaData.toJSON = function () {
+                                    const json = origToJSON.call(this);
+                                    if (json && json.__x_id) delete json.__x_id;
+                                    return json;
+                                };
+                            }
+                        }
+                        return mediaData;
+                    };
+                    window.WWebJS.processMediaData.__xid_patched = true;
+                }
+            } catch (_) {}
+
+            // 4. Patch Msg model initialize to prevent collision
+            try {
+                if (typeof window.require === "function") {
+                    const Collections = window.require("WAWebCollections");
+                    if (Collections && Collections.Msg && Collections.Msg.modelClass && !Collections.Msg.__xid_patched) {
+                        const proto = Collections.Msg.modelClass.prototype;
+                        if (proto && typeof proto.initialize === "function") {
+                            const origInit = proto.initialize;
+                            proto.initialize = function (...args) {
+                                if (this.__x_id && !this.id) {
+                                    delete this.__x_id;
+                                }
+                                return origInit.apply(this, args);
+                            };
+                        }
+                        Collections.Msg.__xid_patched = true;
+                    }
+                }
+            } catch (_) {}
+        });
+    } catch (err) {
+        // Suppress benign evaluation warnings
+    }
+};
+
 export const ensureWhatsAppReady = async () => {
     if (!client || !isReady) {
         throw new Error("WhatsApp client is not authenticated or ready. Please scan the QR code first.");
@@ -249,6 +329,9 @@ export const ensureWhatsAppReady = async () => {
                 await client.pupPage.evaluate(LoadUtils);
                 console.log("✅ [WhatsApp] window.WWebJS successfully re-injected!");
             }
+
+            // Apply in-browser media fixes
+            await patchWhatsAppMediaSupport(client);
         } catch (err) {
             console.warn("⚠️ [WhatsApp] Could not verify/re-inject window.WWebJS:", err.message);
         }
@@ -258,3 +341,4 @@ export const ensureWhatsAppReady = async () => {
 };
 
 export default client;
+
