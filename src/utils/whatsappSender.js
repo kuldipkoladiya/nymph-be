@@ -29,7 +29,7 @@ export const formatWhatsAppNumber = (phone) => {
  * @param {string} messageBody - The text caption to send alongside the PDF
  * @returns {Promise<{success: boolean, messageId?: string, error?: string}>}
  */
-export const sendResultWhatsApp = async (phone, pdfBuffer, filename, messageBody) => {
+export const sendResultWhatsApp = async (phone, pdfBuffer, filename, messageBody = null) => {
     try {
         await ensureWhatsAppReady();
 
@@ -81,12 +81,16 @@ export const sendResultWhatsApp = async (phone, pdfBuffer, filename, messageBody
         let response = null;
         let lastError = null;
 
-        // Attempt 1: Send media as document with text caption
+        const sendOptions = {
+            sendMediaAsDocument: true
+        };
+        if (messageBody) {
+            sendOptions.caption = messageBody;
+        }
+
+        // Attempt 1: Send media as document (strictly PDF file)
         try {
-            response = await client.sendMessage(targetChatId, media, {
-                caption: messageBody,
-                sendMediaAsDocument: true
-            });
+            response = await client.sendMessage(targetChatId, media, sendOptions);
         } catch (errDoc) {
             console.warn(`⚠️ [WhatsApp] Document send attempt 1 failed (${errDoc.message}). Re-injecting patches and retrying...`);
             lastError = errDoc;
@@ -96,20 +100,15 @@ export const sendResultWhatsApp = async (phone, pdfBuffer, filename, messageBody
 
             // Attempt 2: Retry sending document
             try {
-                response = await client.sendMessage(targetChatId, media, {
-                    caption: messageBody,
-                    sendMediaAsDocument: true
-                });
+                response = await client.sendMessage(targetChatId, media, sendOptions);
                 lastError = null;
             } catch (errRetry) {
                 console.warn(`⚠️ [WhatsApp] Document send attempt 2 failed (${errRetry.message}). Retrying as standard media...`);
                 lastError = errRetry;
 
-                // Attempt 3: Retry as standard media without sendMediaAsDocument
+                // Attempt 3: Retry without sendMediaAsDocument
                 try {
-                    response = await client.sendMessage(targetChatId, media, {
-                        caption: messageBody
-                    });
+                    response = await client.sendMessage(targetChatId, media, messageBody ? { caption: messageBody } : {});
                     lastError = null;
                 } catch (errMedia) {
                     console.error(`❌ [WhatsApp] All media send attempts failed for ${targetChatId}:`, errMedia);

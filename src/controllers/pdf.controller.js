@@ -139,15 +139,8 @@ export const sendResultWhatsAppController = async (req, res) => {
 
         const filename = `${student.name.replace(/\s+/g, "_")}_${result.examName.replace(/\s+/g, "_")}_Result.pdf`;
 
-        // Format subjects text cleanly handling absent cases
-        const subjectsText = result.subjects
-            .map((s) => `• *${s.name}*: ${s.marksObtained === "AB" ? "AB (Absent)" : `${s.marksObtained}/${s.totalMarks}`}`)
-            .join("\n");
-
-        const messageBody = `Hello *${student.name}*,\n\nYour result for *${result.examName}* (Standard ${student.standard}) has been published:\n\n*Scores:*\n${subjectsText}\n\n*Total:* ${result.totalObtained} / ${result.totalMaximum}\n*Percentage:* ${result.percentage}%\n*Grade:* ${result.grade}\n\nPlease find your detailed scorecard PDF attached below.\n\nBest regards,\nNymph Classes`;
-
-        // Send via WhatsApp
-        const sendResult = await sendResultWhatsApp(student.phone, buffer, filename, messageBody);
+        // Send via WhatsApp - ONLY PDF document
+        const sendResult = await sendResultWhatsApp(student.phone, buffer, filename);
 
         if (!sendResult.success) {
             return res.status(500).json({
@@ -158,11 +151,8 @@ export const sendResultWhatsAppController = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: sendResult.sentAsTextFallback
-                ? "Result scorecard delivered via WhatsApp (text summary)!"
-                : "Result PDF sent successfully via WhatsApp!",
-            messageId: sendResult.messageId,
-            sentAsTextFallback: sendResult.sentAsTextFallback
+            message: "Result PDF sent successfully via WhatsApp!",
+            messageId: sendResult.messageId
         });
     } catch (err) {
         console.error("WhatsApp Controller Error:", err);
