@@ -68,14 +68,54 @@ export const sendResultWhatsApp = async (phone, pdfBuffer, filename, messageBody
         console.log(`📤 Sending PDF Result via whatsapp-web.js to ${targetChatId}...`);
 
         // Convert the buffer to base64 for whatsapp-web.js MessageMedia
-        const base64Data = pdfBuffer.toString("base64");
-        const media = new MessageMedia("application/pdf", base64Data, filename);
+        const base64Data = pdfBuffer ? pdfBuffer.toString("base64") : null;
+        let response = null;
+        let pdfSendError = null;
 
-        // Send message with media and caption (sendMediaAsDocument ensures fast PDF delivery)
-        const response = await client.sendMessage(targetChatId, media, {
-            caption: messageBody,
-            sendMediaAsDocument: true
-        });
+        if (base64Data) {
+            const media = new MessageMedia("application/pdf", base64Data, filename, pdfBuffer.length);
+
+            // Attempt 1: Send message with media and caption as document
+            try {
+                response = await client.sendMessage(targetChatId, media, {
+                    caption: messageBody,
+                    sendMediaAsDocument: true
+                });
+            } catch (errDoc) {
+                console.warn(`⚠️ [WhatsApp] Failed to send PDF with sendMediaAsDocument: ${errDoc.message}. Retrying as standard media...`);
+                pdfSendError = errDoc;
+
+                // Attempt 2: Send media without sendMediaAsDocument flag
+                try {
+                    response = await client.sendMessage(targetChatId, media, {
+                        caption: messageBody
+                    });
+                    pdfSendError = null;
+                } catch (errMedia) {
+                    console.warn(`⚠️ [WhatsApp] Failed to send PDF as regular media: ${errMedia.message}.`);
+                    pdfSendError = errMedia;
+                }
+            }
+        }
+
+        // Attempt 3: If PDF sending failed or unavailable, fallback to sending complete scorecard text message
+        if (!response && messageBody) {
+            console.log(`🔄 [WhatsApp] Media send failed or unavailable. Falling back to rich text scorecard for ${targetChatId}...`);
+            try {
+                response = await client.sendMessage(targetChatId, messageBody);
+                const messageId = response?.id?._serialized || response?.id?.$1 || (typeof response?.id === "string" ? response.id : null);
+                console.log(`✅ Result text scorecard sent successfully via WhatsApp fallback! Message ID: ${messageId}`);
+                return {
+                    success: true,
+                    messageId,
+                    sentAsTextFallback: true,
+                    warning: pdfSendError ? `PDF attachment failed (${pdfSendError.message}); detailed text scorecard was delivered.` : undefined
+                };
+            } catch (errText) {
+                console.error(`❌ [WhatsApp] Text fallback send also failed:`, errText);
+                throw new Error(pdfSendError ? `Media send error: ${pdfSendError.message}. Text fallback error: ${errText.message}` : errText.message);
+            }
+        }
 
         if (response && response.id) {
             const messageId = response.id._serialized || response.id.$1 || (typeof response.id === "string" ? response.id : null);

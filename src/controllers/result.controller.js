@@ -326,6 +326,98 @@ export const sendMonthlyWhatsAppBulk = asyncHandler(async (req, res) => {
     res.json({ success: true, message: "Bulk WhatsApp messages completed!", report: reportResults });
 });
 
+export const sendRoundTestWhatsAppBulk = asyncHandler(async (req, res) => {
+    const { standard, examName, section, resultIds } = req.body;
+
+    let results = [];
+    if (Array.isArray(resultIds) && resultIds.length > 0) {
+        results = await Result.find({ _id: { $in: resultIds } }).populate("studentId");
+    } else {
+        if (!standard) {
+            res.status(400);
+            throw new Error("Standard is required for bulk sending.");
+        }
+        let query = { standard };
+        if (examName) {
+            query.examName = { $regex: new RegExp(examName, "i") };
+        }
+        results = await Result.find(query).populate("studentId").sort({ createdAt: -1 });
+        if (section) {
+            results = results.filter(r => r.studentId && r.studentId.section === section);
+        }
+    }
+
+    if (!results.length) {
+        return res.status(404).json({
+            success: false,
+            error: "No matching round test results found to send."
+        });
+    }
+
+    const reportResults = [];
+    for (const result of results) {
+        const student = result.studentId;
+        if (!student) {
+            reportResults.push({ student: "Unknown", success: false, error: "Student record missing" });
+            continue;
+        }
+
+        if (!student.phone) {
+            reportResults.push({
+                student: student.name,
+                phone: null,
+                success: false,
+                error: "No phone number registered"
+            });
+            continue;
+        }
+
+        try {
+            const element = React.createElement(ResultPDF, {
+                student,
+                result,
+            });
+            const buffer = await renderToBuffer(element);
+            const filename = `${student.name.replace(/\s+/g, "_")}_${result.examName.replace(/\s+/g, "_")}_Result.pdf`;
+
+            const subjectsText = result.subjects
+                .map((s) => `• *${s.name}*: ${s.marksObtained === "AB" ? "AB (Absent)" : `${s.marksObtained}/${s.totalMarks}`}`)
+                .join("\n");
+
+            const messageBody = `Hello *${student.name}*,\n\nYour result for *${result.examName}* (Standard ${student.standard}) has been published:\n\n*Scores:*\n${subjectsText}\n\n*Total:* ${result.totalObtained} / ${result.totalMaximum}\n*Percentage:* ${result.percentage}%\n*Grade:* ${result.grade}\n\nPlease find your detailed scorecard PDF attached below.\n\nBest regards,\nNymph Classes`;
+
+            const sendResult = await sendResultWhatsApp(student.phone, buffer, filename, messageBody);
+            reportResults.push({
+                student: student.name,
+                phone: student.phone,
+                success: sendResult.success,
+                sentAsTextFallback: sendResult.sentAsTextFallback || false,
+                error: sendResult.error
+            });
+        } catch (err) {
+            reportResults.push({
+                student: student.name,
+                phone: student.phone,
+                success: false,
+                error: err.message
+            });
+        }
+
+        // 1.2s delay between messages to avoid WhatsApp account rate-limits
+        await new Promise((r) => setTimeout(r, 1200));
+    }
+
+    const succeeded = reportResults.filter(r => r.success).length;
+    res.json({
+        success: true,
+        message: `Bulk WhatsApp sending finished: ${succeeded}/${reportResults.length} delivered!`,
+        total: reportResults.length,
+        succeeded,
+        failed: reportResults.length - succeeded,
+        report: reportResults
+    });
+});
+
 
 export const getResultsByClass = asyncHandler(async (req, res) => {
     const { standard, examName, section } = req.query;
